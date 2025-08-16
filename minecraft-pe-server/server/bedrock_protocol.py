@@ -158,6 +158,10 @@ class BedrockProtocol:
                 await self.handle_move_player(data, addr)
             elif packet_id == ID_DISCONNECT:
                 await self.handle_disconnect(data, addr)
+            elif packet_id == 0x00:  # Connected Ping
+                await self.handle_ping(data, addr)
+            elif packet_id == 0x03:  # Connected Pong
+                await self.handle_pong(data, addr)
             else:
                 logger.debug(f"Неизвестный Bedrock пакет: {packet_id:02X} от {addr}")
                 
@@ -167,10 +171,17 @@ class BedrockProtocol:
     async def handle_login(self, data: bytes, addr: Tuple[str, int]):
         """Обработка входа в Minecraft PE"""
         try:
+            # Проверяем, не обрабатывается ли уже вход для этого адреса
+            if addr in self.sessions and self.sessions[addr].connected:
+                logger.debug(f"Игрок с {addr} уже подключен, игнорируем повторный login")
+                return
+            
             # Парсинг данных входа (упрощенно для демонстрации)
             if len(data) > 1:
                 # Извлечение базовой информации
                 username = data[1:].decode('utf-8', errors='ignore').split('\x00')[0]
+                if not username or username == "":
+                    username = f"Player_{random.randint(1000, 9999)}"
                 
                 # Создание сессии
                 session = BedrockSession(addr, random.randint(0, 0xFFFFFFFFFFFFFFFF))
@@ -189,21 +200,42 @@ class BedrockProtocol:
                     
                     # Отправка подтверждения входа
                     await self.send_packet(ID_PLAY_STATUS, struct.pack('>I', 0), addr)  # 0 = Success
+                    logger.info(f"Отправлен PLAY_STATUS для {username}")
+                    
+                    # Небольшая задержка для обработки пакета
+                    await asyncio.sleep(0.1)
                     
                     # Отправка информации о мире
-                    await self.send_packet(ID_START_GAME, self.create_start_game_data(), addr)
+                    start_game_data = self.create_start_game_data()
+                    await self.send_packet(ID_START_GAME, start_game_data, addr)
+                    logger.info(f"Отправлен START_GAME для {username}")
+                    
+                    # Небольшая задержка для обработки пакета
+                    await asyncio.sleep(0.1)
                     
                     # Отправка спавна игрока
-                    await self.send_packet(ID_PLAYER_SPAWN, self.create_player_spawn_data(player), addr)
+                    spawn_data = self.create_player_spawn_data(player)
+                    await self.send_packet(ID_PLAYER_SPAWN, spawn_data, addr)
+                    logger.info(f"Отправлен PLAYER_SPAWN для {username}")
                     
-                    logger.info(f"Игрок {username} успешно подключился")
+                    # Отправка приветственного сообщения
+                    welcome_msg = f"Добро пожаловать на сервер, {username}!"
+                    await self.send_packet(ID_TEXT, welcome_msg.encode('utf-8'), addr)
+                    
+                    logger.info(f"Игрок {username} успешно подключен и загружен в мир")
                     
                 except Exception as e:
                     logger.error(f"Ошибка подключения игрока {username}: {e}")
                     await self.send_packet(ID_DISCONNECT, str(e).encode('utf-8'), addr)
+                    # Удаляем неудачную сессию
+                    if addr in self.sessions:
+                        del self.sessions[addr]
                     
         except Exception as e:
             logger.error(f"Ошибка обработки входа: {e}")
+            # Удаляем неудачную сессию
+            if addr in self.sessions:
+                del self.sessions[addr]
     
     async def handle_text(self, data: bytes, addr: Tuple[str, int]):
         """Обработка текстового сообщения"""
@@ -287,30 +319,57 @@ class BedrockProtocol:
             if hasattr(self.server, 'worlds') and self.server.worlds:
                 world = list(self.server.worlds.values())[0]
                 
+                # Базовые данные мира
                 data = struct.pack('>I', world.seed)  # Seed
-                data += struct.pack('>B', 0)  # Gamemode
+                data += struct.pack('>B', 0)  # Gamemode (0 = Survival)
                 data += struct.pack('>B', 0)  # Entity ID
                 data += struct.pack('>f', float(world.spawn_x))  # Spawn X
                 data += struct.pack('>f', float(world.spawn_y))  # Spawn Y
                 data += struct.pack('>f', float(world.spawn_z))  # Spawn Z
                 
+                # Дополнительные данные для правильной загрузки
+                data += struct.pack('>f', 0.0)  # Yaw
+                data += struct.pack('>f', 0.0)  # Pitch
+                data += struct.pack('>I', 0)  # World time
+                data += struct.pack('>B', 0)  # Weather
+                data += struct.pack('>B', 0)  # Difficulty
+                data += struct.pack('>B', 0)  # Hardcore
+                data += struct.pack('>B', 0)  # PvP
+                
+                logger.debug(f"Создан START_GAME пакет: seed={world.seed}, spawn=({world.spawn_x}, {world.spawn_y}, {world.spawn_z})")
                 return data
             else:
                 # Значения по умолчанию
-                return struct.pack('>IBBfff', 0, 0, 0, 0.0, 64.0, 0.0)
+                default_data = struct.pack('>IBBfff', 0, 0, 0, 0.0, 64.0, 0.0)
+                default_data += struct.pack('>ffIBBB', 0.0, 0.0, 0, 0, 0, 0)
+                logger.debug("Создан START_GAME пакет с значениями по умолчанию")
+                return default_data
                 
         except Exception as e:
             logger.error(f"Ошибка создания данных начала игры: {e}")
+            # Возвращаем минимальные данные
             return struct.pack('>IBBfff', 0, 0, 0, 0.0, 64.0, 0.0)
     
     def create_player_spawn_data(self, player) -> bytes:
         """Создание данных для спавна игрока"""
         try:
-            data = struct.pack('>Q', int(player.uuid, 16) if isinstance(player.uuid, str) else player.uuid)  # UUID
+            # UUID игрока
+            if isinstance(player.uuid, str):
+                try:
+                    uuid_int = int(player.uuid, 16)
+                except ValueError:
+                    uuid_int = hash(player.uuid) & 0xFFFFFFFFFFFFFFFF
+            else:
+                uuid_int = player.uuid
+            
+            data = struct.pack('>Q', uuid_int)  # UUID
             data += struct.pack('>f', player.spawn_x)  # X
             data += struct.pack('>f', player.spawn_y)  # Y
             data += struct.pack('>f', player.spawn_z)  # Z
+            data += struct.pack('>f', 0.0)  # Yaw
+            data += struct.pack('>f', 0.0)  # Pitch
             
+            logger.debug(f"Создан PLAYER_SPAWN пакет для {player.username}: ({player.spawn_x}, {player.spawn_y}, {player.spawn_z})")
             return data
         except Exception as e:
             logger.error(f"Ошибка создания данных спавна: {e}")
@@ -343,6 +402,8 @@ class BedrockProtocol:
     async def disconnect_session(self, session: BedrockSession):
         """Отключение сессии"""
         try:
+            logger.info(f"Отключение сессии для {session.username} ({session.address})")
+            
             # Отправка уведомления об отключении
             await self.send_packet(ID_DISCONNECT, b"Disconnected", session.address)
             
@@ -359,18 +420,42 @@ class BedrockProtocol:
                         
         except Exception as e:
             logger.error(f"Ошибка отключения сессии: {e}")
+            # Принудительно удаляем сессию
+            if session.address in self.sessions:
+                del self.sessions[session.address]
+    
+    async def cleanup_disconnected_sessions(self):
+        """Очистка отключенных сессий"""
+        try:
+            current_time = time.time()
+            sessions_to_remove = []
+            
+            for addr, session in self.sessions.items():
+                # Проверяем таймаут (30 секунд без активности)
+                if current_time - session.last_ping > 30:
+                    logger.info(f"Таймаут сессии {session.username} ({addr})")
+                    sessions_to_remove.append(addr)
+            
+            # Удаляем отключенные сессии
+            for addr in sessions_to_remove:
+                session = self.sessions[addr]
+                await self.disconnect_session(session)
+                
+        except Exception as e:
+            logger.error(f"Ошибка очистки сессий: {e}")
     
     async def process_sessions(self):
         """Обработка сессий"""
         try:
-            current_time = time.time()
+            # Очистка отключенных сессий
+            await self.cleanup_disconnected_sessions()
             
-            for session in list(self.sessions.values()):
-                # Проверка таймаута
+            # Обновление времени последней активности для активных сессий
+            current_time = time.time()
+            for session in self.sessions.values():
                 if session.connected:
-                    if current_time - session.last_ping > 30:  # 30 секунд без активности
-                        logger.warning(f"Таймаут сессии {session.address}")
-                        await self.disconnect_session(session)
+                    # Обновляем время последней активности
+                    session.last_ping = current_time
                         
         except Exception as e:
             logger.error(f"Ошибка обработки сессий: {e}")
@@ -388,3 +473,34 @@ class BedrockProtocol:
             'active_sessions': self.get_session_count(),
             'total_sessions': len(self.sessions)
         }
+
+    async def handle_ping(self, data: bytes, addr: Tuple[str, int]):
+        """Обработка ping от клиента"""
+        try:
+            session = self.sessions.get(addr)
+            if session and session.connected:
+                # Отправляем pong в ответ
+                pong_data = struct.pack('>B', 0x03)  # Connected Pong
+                if len(data) > 1:
+                    pong_data += data[1:]  # Копируем данные ping
+                
+                await self.send_packet(0x03, pong_data[1:], addr)
+                
+                # Обновляем время последней активности
+                session.last_ping = time.time()
+                logger.debug(f"Отправлен pong для {session.username}")
+                
+        except Exception as e:
+            logger.error(f"Ошибка обработки ping: {e}")
+    
+    async def handle_pong(self, data: bytes, addr: Tuple[str, int]):
+        """Обработка pong от клиента"""
+        try:
+            session = self.sessions.get(addr)
+            if session and session.connected:
+                # Обновляем время последней активности
+                session.last_pong = time.time()
+                logger.debug(f"Получен pong от {session.username}")
+                
+        except Exception as e:
+            logger.error(f"Ошибка обработки pong: {e}")

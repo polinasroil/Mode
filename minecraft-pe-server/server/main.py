@@ -585,11 +585,22 @@ log-file=server.log
     
     async def player_join(self, username: str, ip_address: str) -> Player:
         """Подключение игрока к серверу"""
+        # Проверяем, не подключен ли уже игрок с таким IP
+        for existing_player in self.players.values():
+            if existing_player.ip_address == ip_address:
+                # Отключаем существующего игрока
+                logger.info(f"Отключаем существующего игрока {existing_player.username} для нового подключения")
+                await self.player_leave(existing_player.username)
+                break
+        
         if len(self.players) >= self.max_players:
             raise Exception("Сервер переполнен")
         
         if username in self.players:
-            raise Exception("Игрок уже подключен")
+            # Если имя пользователя занято, добавляем случайный суффикс
+            import random
+            username = f"{username}_{random.randint(1000, 9999)}"
+            logger.info(f"Имя пользователя изменено на: {username}")
         
         # Получаем координаты спавна из мира
         world = list(self.worlds.values())[0]
@@ -607,7 +618,7 @@ log-file=server.log
         )
         
         self.players[username] = player
-        logger.info(f"Игрок {username} подключился к серверу")
+        logger.info(f"Игрок {username} подключился к серверу (IP: {ip_address})")
         
         return player
     
