@@ -2,7 +2,11 @@ import { world, system, ItemStack, DynamicPropertiesDefinition } from "@minecraf
 
 const COLLECTORS_PROP = "oc_collectors";
 const SCAN_RADIUS = 3; // blocks around collector to scan
-const TICKS_BETWEEN_SCANS = 100; // ~5 seconds (20 ticks = 1s)
+const TICKS_BETWEEN_SCANS = 40; // ~2 seconds (20 ticks = 1s)
+const MAX_CHARGE = 1.0; // normalized 0..1
+const CHARGE_GAIN_PER_ORE = 0.2; // gain per ore collected
+const CHARGE_DECAY_PER_PASS = 0.05; // decay per scan pass if idle
+const MAX_EXTRA_ATTEMPTS = 3; // up to base(1)+3=4 attempts per pass at full charge
 
 // Map ore block -> { itemId, amount }
 const ORE_DROPS = {
@@ -38,18 +42,28 @@ function getDimensionById(id) {
 	return world.getDimension(id);
 }
 
+function normalizeEntry(p) {
+	return {
+		x: p.x | 0,
+		y: p.y | 0,
+		z: p.z | 0,
+		dimensionId: p.dimensionId,
+		charge: typeof p.charge === "number" ? Math.max(0, Math.min(MAX_CHARGE, p.charge)) : 0
+	};
+}
+
 function loadCollectors() {
 	const stored = world.getDynamicProperty(COLLECTORS_PROP);
 	if (!stored) return [];
 	try {
 		const arr = JSON.parse(stored);
-		if (Array.isArray(arr)) return arr;
+		if (Array.isArray(arr)) return arr.map(normalizeEntry);
 	} catch {}
 	return [];
 }
 
 function saveCollectors(arr) {
-	world.setDynamicProperty(COLLECTORS_PROP, JSON.stringify(arr));
+	world.setDynamicProperty(COLLECTORS_PROP, JSON.stringify(arr.map(normalizeEntry)));
 }
 
 function toggleCollectorAt(block) {
@@ -61,11 +75,11 @@ function toggleCollectorAt(block) {
 	if (idx >= 0) {
 		list.splice(idx, 1);
 		saveCollectors(list);
-		return false;
+		return { enabled: false, charge: 0 };
 	} else {
-		list.push(target);
+		list.push({ ...target, charge: 0 });
 		saveCollectors(list);
-		return true;
+		return { enabled: true, charge: 0 };
 	}
 }
 
@@ -88,8 +102,11 @@ world.beforeEvents.itemUseOn.subscribe(ev => {
 		if (!source || !itemStack || !block) return;
 		if (!source.isSneaking) return;
 		if (itemStack.typeId !== "minecraft:stick") return;
-		const enabled = toggleCollectorAt(block);
-		source.sendMessage(`§7Collector ${enabled ? "§aenabled" : "§cdisabled"} §7at §f(${block.location.x}, ${block.location.y}, ${block.location.z})`);
+		const res = toggleCollectorAt(block);
+		source.sendMessage(`§7Collector ${res.enabled ? "§aenabled" : "§cdisabled"} §7at §f(${block.location.x}, ${block.location.y}, ${block.location.z})`);
+		if (res.enabled) {
+			source.sendMessage("§8Tip: The collector has inertia. Keep ores nearby to ramp up speed.");
+		}
 	} catch (e) {
 		// Swallow to avoid crashing scripts in release
 	}
@@ -131,20 +148,30 @@ function collectOneOreNear(dimension, center) {
 	return false;
 }
 
-// Periodic scan
+// Periodic scan with inertia logic
 system.runInterval(() => {
 	try {
 		const entries = loadCollectors();
 		if (!entries.length) return;
+		let dirty = false;
 		for (const p of entries) {
 			const dim = getDimensionById(p.dimensionId);
 			if (!dim) continue;
 			const center = { x: p.x, y: p.y, z: p.z };
-			// attempt to collect up to 2 ores per pass per collector
+			const extra = Math.max(0, Math.min(MAX_EXTRA_ATTEMPTS, Math.floor((p.charge || 0) * MAX_EXTRA_ATTEMPTS)));
+			const attempts = 1 + extra;
 			let processed = 0;
-			while (processed < 2 && collectOneOreNear(dim, center)) {
+			while (processed < attempts && collectOneOreNear(dim, center)) {
 				processed++;
 			}
+			if (processed > 0) {
+				p.charge = Math.min(MAX_CHARGE, (p.charge || 0) + CHARGE_GAIN_PER_ORE * processed);
+				dirty = true;
+			} else if ((p.charge || 0) > 0) {
+				p.charge = Math.max(0, (p.charge || 0) - CHARGE_DECAY_PER_PASS);
+				dirty = true;
+			}
 		}
+		if (dirty) saveCollectors(entries);
 	} catch {}
 }, TICKS_BETWEEN_SCANS);
