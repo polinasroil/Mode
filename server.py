@@ -11,10 +11,12 @@ import threading
 import time
 from typing import Dict, List, Optional
 
-from network.raknet import RakNetServer
+from network.raknet_improved import RakNetImproved
 from player import Player
 from world import World
 from packets import PacketHandler, PacketID, PlayStatus, PlayerAction, BlockID
+from player_manager import PlayerManager
+from world_generator import WorldGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +32,10 @@ class MinecraftServer:
         self.difficulty = 1  # Easy
         
         # Server components
-        self.raknet = RakNetServer(self.host, self.port)
+        self.raknet = RakNetImproved(self.host, self.port)
         self.world = World()
-        self.players: Dict[str, Player] = {}
+        self.player_manager = PlayerManager(self)
+        self.world_generator = WorldGenerator()
         self.running = False
         
         # Command system
@@ -79,33 +82,20 @@ class MinecraftServer:
         
         for connection in new_connections:
             try:
-                # Create new player
-                player = Player(connection)
-                self.players[player.guid] = player
-                
-                logger.info(f"Player {player.username} connected from {connection.address}")
-                
-                # Send login success
-                await self.send_login_success(player)
-                
-                # Send start game packet
-                await self.send_start_game(player)
-                
-                # Send spawn chunks
-                await self.send_spawn_chunks(player)
-                
-                # Broadcast player join
-                await self.broadcast_message(f"§e{player.username} joined the game")
+                # Handle new connection with player manager
+                player = await self.player_manager.handle_new_connection(connection)
+                if player:
+                    logger.info(f"Player {player.username} connected from {connection.address}")
                 
             except Exception as e:
                 logger.error(f"Error handling new connection: {e}")
     
     async def handle_player_packets(self):
         """Handle incoming packets from all players"""
-        for player in list(self.players.values()):
+        for player in list(self.player_manager.players.values()):
             try:
                 if not player.connection.is_connected():
-                    await self.remove_player(player)
+                    await self.player_manager.disconnect_player(player, "Connection lost")
                     continue
                 
                 # Process player packets

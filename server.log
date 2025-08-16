@@ -138,3 +138,37 @@
 2025-08-16 18:25:00,867 - world - INFO - World saved to world.json
 2025-08-16 18:25:00,918 - world - INFO - World saved to world.json
 2025-08-16 18:25:00,968 - world - INFO - World saved to world.json
+2025-08-16 18:30:00,024 - world - INFO - World saved to world.json
+2025-08-16 18:30:00,075 - world - INFO - World saved to world.json
+2025-08-16 18:30:00,125 - world - INFO - World saved to world.json
+2025-08-16 18:30:00,176 - world - INFO - World saved to world.json
+2025-08-16 18:30:00,226 - world - INFO - World saved to world.json
+2025-08-16 18:30:00,277 - world - INFO - World saved to world.json
+2025-08-16 18:30:00,327 - world - INFO - World saved to world.json
+2025-08-16 18:30:00,377 - world - INFO - World saved to world.json
+2025-08-16 18:30:00,428 - world - INFO - World saved to world.json
+2025-08-16 18:30:00,478 - world - INFO - World saved to world.json
+2025-08-16 18:30:00,528 - world - INFO - World saved to world.json
+2025-08-16 18:30:00,579 - world - INFO - World saved to world.json
+2025-08-16 18:30:00,629 - world - INFO - World saved to world.json
+2025-08-16 18:30:00,679 - world - INFO - World saved to world.json
+2025-08-16 18:30:00,730 - world - INFO - World saved to world.json
+2025-08-16 18:30:00,780 - world - INFO - World saved to world.json
+2025-08-16 18:30:00,830 - world - INFO - World saved to world.json
+2025-08-16 18:30:00,881 - world - INFO - World saved to world.json
+2025-08-16 18:30:00,931 - world - INFO - World saved to world.json
+2025-08-16 18:30:00,981 - world - INFO - World saved to world.json
+2025-08-16 18:32:50,051 - network.raknet_improved - INFO - Improved RakNet server initialized on 0.0.0.0:19132
+2025-08-16 18:32:50,051 - world - INFO - Created world with seed: 263754
+2025-08-16 18:32:50,051 - world_generator - INFO - World generator initialized with seed: 319742
+2025-08-16 18:32:50,051 - player_manager - INFO - Player manager initialized
+2025-08-16 18:32:50,051 - world_generator - INFO - World generator initialized with seed: 756569
+2025-08-16 18:32:50,052 - __main__ - INFO - Starting Minecraft Bedrock Server...
+2025-08-16 18:32:50,052 - __main__ - INFO - Server will be available at 0.0.0.0:19132
+2025-08-16 18:32:50,052 - __main__ - INFO - Type 'stop' in console to shutdown the server
+2025-08-16 18:32:50,052 - world - INFO - World loaded from world.json
+2025-08-16 18:32:50,052 - world - INFO - Loaded 0 chunks
+2025-08-16 18:32:50,052 - network.raknet_improved - INFO - Improved RakNet server started on 0.0.0.0:19132
+2025-08-16 18:32:50,052 - server - INFO - Server started on 0.0.0.0:19132
+2025-08-16 18:32:50,052 - server - INFO - Max players: 20
+2025-08-16 18:32:50,052 - server - INFO - MOTD: Python Bedrock Server
