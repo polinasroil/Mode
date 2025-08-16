@@ -1,0 +1,30 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Ore Collector BP",
+    "description": "Turn any block into an ore collector using a stick. Requires Beta APIs enabled.",
+    "uuid": "b0b9b0a7-9d14-47f9-b0f9-8b0c2f2e4b10",
+    "version": [1, 0, 0],
+    "min_engine_version": [1, 21, 0]
+  },
+  "modules": [
+    {
+      "type": "data",
+      "uuid": "b2a4052b-3f1f-4640-8e1b-2a3f3a2d1fcd",
+      "version": [1, 0, 0]
+    },
+    {
+      "type": "script",
+      "language": "javascript",
+      "entry": "scripts/main.js",
+      "uuid": "2a9b1a2e-58c6-4b8a-9c2d-79b7e8f9a0a3",
+      "version": [1, 0, 0]
+    }
+  ],
+  "dependencies": [
+    {
+      "module_name": "@minecraft/server",
+      "version": "1.9.0"
+    }
+  ]
+}
