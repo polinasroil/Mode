@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block title %}Панель управления - Minecraft PE Server{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-tachometer-alt me-2"></i>Панель управления</h1>
+    <div class="btn-group" role="group">
+        <button type="button" class="btn btn-success" id="startServer">
+            <i class="fas fa-play me-1"></i>Запустить
+        </button>
+        <button type="button" class="btn btn-danger" id="stopServer">
+            <i class="fas fa-stop me-1"></i>Остановить
+        </button>
+        <button type="button" class="btn btn-warning" id="restartServer">
+            <i class="fas fa-redo me-1"></i>Перезапустить
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Статус сервера -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card bg-dark border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5><i class="fas fa-server me-2"></i>Статус сервера</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h3 class="text-{{ 'success' if server_info.status == 'running' else 'danger' }}">
+                                {{ 'Запущен' if server_info.status == 'running' else 'Остановлен' }}
+                            </h3>
+                            <small class="text-muted">Статус</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h3 class="text-info">{{ server_info.uptime }}</h3>
+                            <small class="text-muted">Время работы</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card bg-dark border-success">
+            <div class="card-header bg-success text-white">
+                <h5><i class="fas fa-users me-2"></i>Игроки</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h3 class="text-success">{{ server_info.players.online }}</h3>
+                            <small class="text-muted">Онлайн</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h3 class="text-warning">{{ server_info.players.max }}</h3>
+                            <small class="text-muted">Максимум</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Системная информация -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card bg-dark border-info">
+            <div class="card-header bg-info text-white">
+                <h5><i class="fas fa-microchip me-2"></i>CPU</h5>
+            </div>
+            <div class="card-body text-center">
+                <h2 class="text-info">{{ "%.1f"|format(system_info.cpu_usage) }}%</h2>
+                <div class="progress">
+                    <div class="progress-bar bg-info" style="width: {{ system_info.cpu_usage }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card bg-dark border-warning">
+            <div class="card-header bg-warning text-white">
+                <h5><i class="fas fa-memory me-2"></i>Память</h5>
+            </div>
+            <div class="card-body text-center">
+                <h2 class="text-warning">{{ "%.1f"|format(system_info.memory_percent) }}%</h2>
+                <div class="progress">
+                    <div class="progress-bar bg-warning" style="width: {{ system_info.memory_percent }}%"></div>
+                </div>
+                <small class="text-muted">{{ system_info.memory_used }}GB / {{ system_info.memory_total }}GB</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card bg-dark border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5><i class="fas fa-hdd me-2"></i>Диск</h5>
+            </div>
+            <div class="card-body text-center">
+                <h2 class="text-danger">{{ "%.1f"|format(system_info.disk_percent) }}%</h2>
+                <div class="progress">
+                    <div class="progress-bar bg-danger" style="width: {{ system_info.disk_percent }}%"></div>
+                </div>
+                <small class="text-muted">{{ system_info.disk_used }}GB / {{ system_info.disk_total }}GB</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Графики -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card bg-dark border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5><i class="fas fa-chart-line me-2"></i>Использование ресурсов</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="resourceChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card bg-dark border-success">
+            <div class="card-header bg-success text-white">
+                <h5><i class="fas fa-chart-pie me-2"></i>Активность игроков</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="playerChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Быстрые действия -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card bg-dark border-warning">
+            <div class="card-header bg-warning text-white">
+                <h5><i class="fas fa-bolt me-2"></i>Быстрые действия</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('console') }}" class="btn btn-outline-warning">
+                        <i class="fas fa-terminal me-2"></i>Консоль сервера
+                    </a>
+                    <a href="{{ url_for('players') }}" class="btn btn-outline-info">
+                        <i class="fas fa-users me-2"></i>Управление игроками
+                    </a>
+                    <a href="{{ url_for('backups') }}" class="btn btn-outline-success">
+                        <i class="fas fa-database me-2"></i>Резервные копии
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card bg-dark border-info">
+            <div class="card-header bg-info text-white">
+                <h5><i class="fas fa-info-circle me-2"></i>Информация о сервере</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li><strong>Название:</strong> {{ server_info.name }}</li>
+                    <li><strong>Версия:</strong> {{ server_info.version }}</li>
+                    <li><strong>Миры:</strong> {{ server_info.worlds|length }}</li>
+                    <li><strong>Плагины:</strong> {{ server_info.plugins|length }}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// График использования ресурсов
+const resourceCtx = document.getElementById('resourceChart').getContext('2d');
+const resourceChart = new Chart(resourceCtx, {
+    type: 'line',
+    data: {
+        labels: ['1 мин', '2 мин', '3 мин', '4 мин', '5 мин'],
+        datasets: [{
+            label: 'CPU (%)',
+            data: [25, 30, 35, 40, 45],
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.1
+        }, {
+            label: 'Память (%)',
+            data: [60, 65, 70, 75, 80],
+            borderColor: 'rgb(255, 205, 86)',
+            backgroundColor: 'rgba(255, 205, 86, 0.2)',
+            tension: 0.1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                labels: {
+                    color: 'white'
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    color: 'white'
+                }
+            },
+            x: {
+                ticks: {
+                    color: 'white'
+                }
+            }
+        }
+    }
+});
+
+// График активности игроков
+const playerCtx = document.getElementById('playerChart').getContext('2d');
+const playerChart = new Chart(playerCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Онлайн', 'Оффлайн'],
+        datasets: [{
+            data: [{{ server_info.players.online }}, {{ server_info.players.max - server_info.players.online }}],
+            backgroundColor: [
+                'rgba(75, 192, 192, 0.8)',
+                'rgba(201, 203, 207, 0.8)'
+            ],
+            borderColor: [
+                'rgba(75, 192, 192, 1)',
+                'rgba(201, 203, 207, 1)'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                labels: {
+                    color: 'white'
+                }
+            }
+        }
+    }
+});
+
+// Обработчики кнопок управления сервером
+document.getElementById('startServer').addEventListener('click', function() {
+    if (confirm('Запустить сервер?')) {
+        fetch('/api/server/start', {method: 'POST'})
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + data.message);
+                }
+            });
+    }
+});
+
+document.getElementById('stopServer').addEventListener('click', function() {
+    if (confirm('Остановить сервер?')) {
+        fetch('/api/server/stop', {method: 'POST'})
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + data.message);
+                }
+            });
+    }
+});
+
+document.getElementById('restartServer').addEventListener('click', function() {
+    if (confirm('Перезапустить сервер?')) {
+        fetch('/api/server/restart', {method: 'POST'})
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + data.message);
+                }
+            });
+    }
+});
+
+// Автообновление данных каждые 30 секунд
+setInterval(function() {
+    fetch('/api/server/status')
+        .then(response => response.json())
+        .then(data => {
+            // Обновление данных на странице
+            if (data.running) {
+                document.querySelector('.text-danger').className = 'text-success';
+                document.querySelector('.text-danger').textContent = 'Запущен';
+            } else {
+                document.querySelector('.text-success').className = 'text-danger';
+                document.querySelector('.text-success').textContent = 'Остановлен';
+            }
+        });
+}, 30000);
+</script>
+{% endblock %}
