@@ -306,7 +306,7 @@ class BedrockProtocol:
     def create_player_spawn_data(self, player) -> bytes:
         """Создание данных для спавна игрока"""
         try:
-            data = struct.pack('>Q', player.uuid)  # UUID
+            data = struct.pack('>Q', int(player.uuid, 16) if isinstance(player.uuid, str) else player.uuid)  # UUID
             data += struct.pack('>f', player.spawn_x)  # X
             data += struct.pack('>f', player.spawn_y)  # Y
             data += struct.pack('>f', player.spawn_z)  # Z

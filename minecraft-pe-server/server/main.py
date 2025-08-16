@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Minecraft PE Server - Основной сервер (исправленная версия)
+Minecraft PE Server - Основной сервер (Bedrock протокол для телефона)
 Автор: Minecraft PE Server Team
 Версия: 1.0.0
 """
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Player:
-    """Класс игрока"""
+    """Класс игрока Minecraft PE"""
     username: str
     uuid: str
     ip_address: str
@@ -62,7 +62,7 @@ class Player:
             self.permissions = ["player"]
 
 class MinecraftPEServer:
-    """Основной класс сервера Minecraft PE"""
+    """Основной класс сервера Minecraft PE (Bedrock протокол)"""
     
     def __init__(self, config_path: str = "config/server.properties"):
         self.config_path = config_path
@@ -177,8 +177,8 @@ class MinecraftPEServer:
             }
     
     def create_default_config(self) -> str:
-        """Создание конфигурации по умолчанию"""
-        return """# Minecraft PE Server Configuration
+        """Создание конфигурации по умолчанию для Minecraft PE"""
+        return """# Minecraft PE Server Configuration (Bedrock протокол для телефона)
 # Автор: Minecraft PE Server Team
 # Версия: 1.0.0
 
@@ -204,10 +204,11 @@ backup-interval=3600
 auto-save=true
 auto-save-interval=300
 
-# Сетевые настройки
-raknet-protocol-version=11
-minecraft-protocol-version=662
-mtu-size=1492
+# Bedrock протокол (Minecraft PE на телефоне)
+bedrock-protocol-version=662
+bedrock-game-version=1.20.50
+bedrock-allow-cheats=false
+bedrock-texturepack-required=false
 
 # Настройки производительности
 tps=20
@@ -717,11 +718,11 @@ log-file=server.log
         if hasattr(self, 'network'):
             # Находим клиента по имени пользователя
             for session in self.network.sessions.values():
-                if session.state == "connected":
+                if session.connected:
                     # Здесь нужно найти сессию по IP игрока
                     for player in self.players.values():
                         if player.username == username and player.ip_address == session.address[0]:
-                            await self.network.send_minecraft_packet(0x09, message.encode('utf-8'), session)
+                            await self.network.send_packet(0x09, message.encode('utf-8'), session.address)
                             break
     
     def get_world(self, world_name: str = None) -> Optional[World]:
