@@ -1,0 +1,12 @@
+{
+  "format_version": 1,
+  "world_settings": {
+    "drill_rig_mod": {
+      "enabled": true,
+      "drill_speed": 2000,
+      "max_drill_depth": 64,
+      "energy_consumption": false,
+      "auto_collect": true
+    }
+  }
+}
