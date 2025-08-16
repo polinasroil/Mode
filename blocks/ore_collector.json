@@ -1,0 +1,43 @@
+{
+  "format_version": "1.20.0",
+  "minecraft:block": {
+    "description": {
+      "identifier": "ore_collector:ore_collector",
+      "properties": {
+        "minecraft:direction": [0, 1, 2, 3],
+        "minecraft:on": [0, 1]
+      }
+    },
+    "components": {
+      "minecraft:collision_box": {
+        "origin": [-8, 0, -8],
+        "size": [16, 16, 16]
+      },
+      "minecraft:selection_box": {
+        "origin": [-8, 0, -8],
+        "size": [16, 16, 16]
+      },
+      "minecraft:material_instances": {
+        "*": {
+          "texture": "ore_collector",
+          "render_method": "alpha_test"
+        }
+      },
+      "minecraft:geometry": "geometry.ore_collector",
+      "minecraft:destructible_by_mining": {
+        "seconds_to_destroy": 3
+      },
+      "minecraft:destructible_by_explosion": {
+        "explosion_resistance": 6
+      },
+      "minecraft:loot": "loot_tables/blocks/ore_collector.json"
+    },
+    "events": {
+      "minecraft:on_player_destroyed": {
+        "run_command": {
+          "command": "setblock ~ ~ ~ air"
+        }
+      }
+    }
+  }
+}
