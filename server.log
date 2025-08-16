@@ -1,0 +1,59 @@
+2025-08-16 18:11:07,762 - network.raknet - INFO - RakNet server initialized on 0.0.0.0:19132
+2025-08-16 18:11:07,762 - world - INFO - Created world with seed: 690751
+2025-08-16 18:11:07,762 - __main__ - INFO - Starting Minecraft Bedrock Server...
+2025-08-16 18:11:07,762 - __main__ - INFO - Server will be available at 0.0.0.0:19132
+2025-08-16 18:11:07,762 - __main__ - INFO - Type 'stop' in console to shutdown the server
+2025-08-16 18:11:07,763 - world - INFO - No world file found, starting with new world
+2025-08-16 18:11:07,763 - network.raknet - INFO - RakNet server started on 0.0.0.0:19132
+2025-08-16 18:11:07,763 - server - INFO - Server started on 0.0.0.0:19132
+2025-08-16 18:11:07,763 - server - INFO - Max players: 20
+2025-08-16 18:11:07,763 - server - INFO - MOTD: Python Bedrock Server
+2025-08-16 18:11:08,414 - network.raknet - INFO - RakNet server initialized on 0.0.0.0:19132
+2025-08-16 18:11:08,414 - world - INFO - Created world with seed: 493209
+2025-08-16 18:11:08,414 - __main__ - INFO - Starting Minecraft Bedrock Server...
+2025-08-16 18:11:08,415 - __main__ - INFO - Server will be available at 0.0.0.0:19132
+2025-08-16 18:11:08,415 - __main__ - INFO - Type 'stop' in console to shutdown the server
+2025-08-16 18:11:08,415 - world - INFO - No world file found, starting with new world
+2025-08-16 18:11:08,415 - network.raknet - INFO - RakNet server started on 0.0.0.0:19132
+2025-08-16 18:11:08,415 - server - INFO - Server started on 0.0.0.0:19132
+2025-08-16 18:11:08,415 - server - INFO - Max players: 20
+2025-08-16 18:11:08,415 - server - INFO - MOTD: Python Bedrock Server
+2025-08-16 18:15:00,009 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,045 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,060 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,096 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,111 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,146 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,161 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,197 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,212 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,248 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,264 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,298 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,314 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,349 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,365 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,400 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,416 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,450 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,466 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,501 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,517 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,552 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,567 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,602 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,618 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,654 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,668 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,705 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,719 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,755 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,769 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,806 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,820 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,857 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,871 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,907 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,921 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,958 - world - INFO - World saved to world.json
+2025-08-16 18:15:00,972 - world - INFO - World saved to world.json
