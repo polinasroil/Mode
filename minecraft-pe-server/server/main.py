@@ -19,11 +19,13 @@ from typing import Dict, List, Optional, Set
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
 
-# Импорт сетевого модуля
+# Импорт модулей
 try:
-    from .network import MinecraftPENetworkProtocol
+    from .raknet import RakNetProtocol
+    from .world import World, WorldGenerator
 except ImportError:
-    from network import MinecraftPENetworkProtocol
+    from raknet import RakNetProtocol
+    from world import World, WorldGenerator
 
 # Настройка логирования
 logging.basicConfig(
@@ -59,22 +61,6 @@ class Player:
         if self.permissions is None:
             self.permissions = ["player"]
 
-@dataclass
-class World:
-    """Класс мира"""
-    name: str
-    seed: int
-    world_type: str
-    spawn_x: int = 0
-    spawn_y: int = 64
-    spawn_z: int = 0
-    time: int = 0
-    weather: str = "clear"
-    difficulty: str = "normal"
-    gamemode: str = "survival"
-    hardcore: bool = False
-    pvp: bool = True
-
 class MinecraftPEServer:
     """Основной класс сервера Minecraft PE"""
     
@@ -108,8 +94,8 @@ class MinecraftPEServer:
         # Загрузка плагинов
         self.load_plugins()
         
-        # Инициализация сетевого протокола
-        self.network = MinecraftPENetworkProtocol(self)
+        # Инициализация RakNet протокола
+        self.network = RakNetProtocol(self)
         
         logger.info(f"Сервер {self.server_name} инициализирован")
     
@@ -175,28 +161,29 @@ class MinecraftPEServer:
             hardcore = self.config.get('hardcore', 'false').lower() == 'true'
             pvp = self.config.get('pvp', 'true').lower() == 'true'
             
+            # Создание мира с новой системой
             default_world = World(
                 name=world_name,
                 seed=world_seed,
-                world_type=world_type,
-                difficulty=difficulty,
-                gamemode=gamemode,
-                hardcore=hardcore,
-                pvp=pvp
+                world_type=world_type
             )
+            
+            # Установка дополнительных параметров
+            default_world.difficulty = difficulty
+            default_world.gamemode = gamemode
+            default_world.hardcore = hardcore
+            default_world.pvp = pvp
+            
             self.worlds[default_world.name] = default_world
             logger.info(f"Мир '{default_world.name}' инициализирован")
+            
         except Exception as e:
             logger.error(f"Ошибка инициализации мира: {e}")
             # Создаем мир по умолчанию при ошибке
             default_world = World(
                 name='world',
                 seed=0,
-                world_type='default',
-                difficulty='normal',
-                gamemode='survival',
-                hardcore=False,
-                pvp=True
+                world_type='default'
             )
             self.worlds[default_world.name] = default_world
     
@@ -225,12 +212,15 @@ class MinecraftPEServer:
         self.start_time = datetime.now()
         logger.info(f"Сервер {self.server_name} запускается...")
         
-        # Запуск сетевого протокола
+        # Загрузка/генерация миров
+        await self.load_worlds()
+        
+        # Запуск RakNet протокола
         try:
             await self.network.start(port=self.server_port)
-            logger.info(f"Сетевой протокол запущен на порту {self.server_port}")
+            logger.info(f"RakNet протокол запущен на порту {self.server_port}")
         except Exception as e:
-            logger.error(f"Ошибка запуска сетевого протокола: {e}")
+            logger.error(f"Ошибка запуска RakNet протокола: {e}")
             raise
         
         # Запуск основных задач
@@ -238,7 +228,8 @@ class MinecraftPEServer:
             asyncio.create_task(self.server_loop()),
             asyncio.create_task(self.monitoring_loop()),
             asyncio.create_task(self.backup_loop()),
-            asyncio.create_task(self.cleanup_inactive_players())
+            asyncio.create_task(self.cleanup_inactive_players()),
+            asyncio.create_task(self.world_maintenance_loop())
         ]
         
         try:
@@ -248,6 +239,23 @@ class MinecraftPEServer:
         finally:
             await self.stop()
     
+    async def load_worlds(self):
+        """Загрузка всех миров"""
+        logger.info("Загрузка миров...")
+        
+        for world_name, world in self.worlds.items():
+            try:
+                await world.load_world()
+                logger.info(f"Мир '{world_name}' загружен")
+            except Exception as e:
+                logger.error(f"Ошибка загрузки мира '{world_name}': {e}")
+                # Попытка генерации нового мира
+                try:
+                    await world.generate_world()
+                    logger.info(f"Мир '{world_name}' сгенерирован заново")
+                except Exception as e2:
+                    logger.error(f"Критическая ошибка генерации мира '{world_name}': {e2}")
+    
     async def stop(self):
         """Остановка сервера"""
         if not self.running:
@@ -256,17 +264,17 @@ class MinecraftPEServer:
         logger.info("Остановка сервера...")
         self.running = False
         
-        # Остановка сетевого протокола
+        # Остановка RakNet протокола
         try:
             await self.network.stop()
         except Exception as e:
-            logger.error(f"Ошибка остановки сетевого протокола: {e}")
+            logger.error(f"Ошибка остановки RakNet протокола: {e}")
         
         # Отключение всех игроков
         for player in list(self.players.values()):
             await self.disconnect_player(player)
         
-        # Сохранение мира
+        # Сохранение миров
         await self.save_worlds()
         
         # Сохранение статистики
@@ -285,7 +293,7 @@ class MinecraftPEServer:
                 # Обновление игроков
                 await self.update_players()
                 
-                # Обновление мира
+                # Обновление миров
                 await self.update_worlds()
                 
                 # Обновление плагинов
@@ -331,6 +339,21 @@ class MinecraftPEServer:
             except Exception as e:
                 logger.error(f"Ошибка в цикле резервного копирования: {e}")
     
+    async def world_maintenance_loop(self):
+        """Цикл обслуживания миров"""
+        while self.running:
+            try:
+                await asyncio.sleep(300)  # Каждые 5 минут
+                
+                # Автосохранение миров
+                await self.auto_save_worlds()
+                
+                # Очистка неиспользуемых чанков
+                await self.cleanup_unused_chunks()
+                
+            except Exception as e:
+                logger.error(f"Ошибка в цикле обслуживания миров: {e}")
+    
     async def cleanup_inactive_players(self):
         """Очистка неактивных игроков"""
         while self.running:
@@ -369,7 +392,7 @@ class MinecraftPEServer:
         """Обновление миров"""
         for world in self.worlds.values():
             # Обновление времени
-            world.time = (world.time + 1) % 24000
+            world.update_time()
             
             # Обновление погоды
             if world.time % 12000 == 0:  # Каждые 10 минут
@@ -419,11 +442,57 @@ class MinecraftPEServer:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_name = f"backup_{timestamp}"
             
-            # Здесь будет логика создания резервной копии
+            # Создание резервной копии миров
+            for world_name, world in self.worlds.items():
+                world_backup_dir = backup_dir / backup_name / world_name
+                world_backup_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Копирование файлов мира
+                if world.world_file.exists():
+                    import shutil
+                    shutil.copy2(world.world_file, world_backup_dir)
+                
+                # Копирование чанков
+                if world.chunks_dir.exists():
+                    shutil.copytree(world.chunks_dir, world_backup_dir / "chunks", dirs_exist_ok=True)
+            
             logger.info(f"Резервная копия '{backup_name}' создана")
             
         except Exception as e:
             logger.error(f"Ошибка создания резервной копии: {e}")
+    
+    async def auto_save_worlds(self):
+        """Автоматическое сохранение миров"""
+        for world_name, world in self.worlds.items():
+            try:
+                await world.save_world()
+                logger.debug(f"Мир '{world_name}' автосохранен")
+            except Exception as e:
+                logger.error(f"Ошибка автосохранения мира '{world_name}': {e}")
+    
+    async def cleanup_unused_chunks(self):
+        """Очистка неиспользуемых чанков"""
+        for world_name, world in self.worlds.items():
+            try:
+                # Удаляем чанки, которые не загружены более 30 минут
+                current_time = datetime.now()
+                chunks_to_remove = []
+                
+                for chunk_coords, chunk in world.chunks.items():
+                    if chunk_coords not in world.loaded_chunks:
+                        # Проверяем время последнего использования
+                        if (current_time - chunk.last_modified).total_seconds() > 1800:
+                            chunks_to_remove.append(chunk_coords)
+                
+                # Удаляем неиспользуемые чанки
+                for chunk_coords in chunks_to_remove:
+                    del world.chunks[chunk_coords]
+                
+                if chunks_to_remove:
+                    logger.debug(f"Удалено {len(chunks_to_remove)} неиспользуемых чанков в мире '{world_name}'")
+                    
+            except Exception as e:
+                logger.error(f"Ошибка очистки чанков в мире '{world_name}': {e}")
     
     async def player_join(self, username: str, ip_address: str) -> Player:
         """Подключение игрока к серверу"""
@@ -496,13 +565,13 @@ class MinecraftPEServer:
         return random.choice(weathers)
     
     async def save_worlds(self):
-        """Сохранение миров"""
-        for world in self.worlds.values():
+        """Сохранение всех миров"""
+        for world_name, world in self.worlds.items():
             try:
-                # Здесь будет логика сохранения мира
-                pass
+                await world.save_world()
+                logger.info(f"Мир '{world_name}' сохранен")
             except Exception as e:
-                logger.error(f"Ошибка сохранения мира {world.name}: {e}")
+                logger.error(f"Ошибка сохранения мира '{world_name}': {e}")
     
     async def save_player_data(self, player: Player):
         """Сохранение данных игрока"""
@@ -528,6 +597,13 @@ class MinecraftPEServer:
     
     def get_server_info(self) -> Dict:
         """Получение информации о сервере"""
+        worlds_info = {}
+        for world_name, world in self.worlds.items():
+            worlds_info[world_name] = world.get_world_info()
+        
+        # Добавление информации о RakNet
+        network_info = self.network.get_server_info() if hasattr(self, 'network') else {}
+        
         return {
             'name': self.server_name,
             'version': '1.0.0',
@@ -536,10 +612,11 @@ class MinecraftPEServer:
                 'max': self.max_players,
                 'list': [p.username for p in self.players.values()]
             },
-            'worlds': [w.name for w in self.worlds.values()],
+            'worlds': worlds_info,
             'plugins': self.plugins,
             'stats': self.stats,
-            'uptime': self.stats['uptime']
+            'uptime': self.stats['uptime'],
+            'network': network_info
         }
     
     async def broadcast_message(self, message: str):
@@ -551,10 +628,39 @@ class MinecraftPEServer:
         """Отправка сообщения конкретному игроку"""
         if hasattr(self, 'network'):
             # Находим клиента по имени пользователя
-            for client in self.network.clients.values():
-                if client.username == username:
-                    await self.network.send_message(client, message)
-                    break
+            for session in self.network.sessions.values():
+                if session.state == "connected":
+                    # Здесь нужно найти сессию по IP игрока
+                    for player in self.players.values():
+                        if player.username == username and player.ip_address == session.address[0]:
+                            await self.network.send_minecraft_packet(0x09, message.encode('utf-8'), session)
+                            break
+    
+    def get_world(self, world_name: str = None) -> Optional[World]:
+        """Получение мира по имени"""
+        if world_name is None:
+            # Возвращаем первый мир
+            return list(self.worlds.values())[0] if self.worlds else None
+        return self.worlds.get(world_name)
+    
+    def get_block(self, x: int, y: int, z: int, world_name: str = None) -> Optional[any]:
+        """Получение блока в мире"""
+        world = self.get_world(world_name)
+        if world:
+            return world.get_block(x, y, z)
+        return None
+    
+    def set_block(self, x: int, y: int, z: int, block_id: int, metadata: int = 0, world_name: str = None):
+        """Установка блока в мире"""
+        world = self.get_world(world_name)
+        if world:
+            world.set_block(x, y, z, block_id, metadata)
+    
+    def remove_block(self, x: int, y: int, z: int, world_name: str = None):
+        """Удаление блока из мира"""
+        world = self.get_world(world_name)
+        if world:
+            world.remove_block(x, y, z)
 
 async def main():
     """Главная функция"""
