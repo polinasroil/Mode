@@ -349,6 +349,7 @@ class CompatibleServer:
         self.raknet = CompatibleRakNet(self.host, self.port)
         self.players: Dict[str, CompatiblePlayer] = {}
         self.running = False
+        self.start_time = time.time()
         
         logger.info("Compatible server initialized")
     

@@ -242,15 +242,18 @@ class RakNetImproved:
             
             protocol_version = struct.unpack('<H', data[1:3])[0]
             
-            if protocol_version != self.protocol_version:
-                # Send incompatible protocol version
-                response = bytearray()
-                response.append(self.ID_INCOMPATIBLE_PROTOCOL_VERSION)
-                response.extend(struct.pack('<Q', self.server_guid))
-                response.extend(struct.pack('<H', self.protocol_version))
-                await self.send_packet(bytes(response), addr)
-                logger.info(f"Rejected connection from {addr} - incompatible protocol {protocol_version}")
-                return
+            # Support multiple protocol versions
+            supported_versions = [662, 663, 664, 665, 666, 667, 668, 669, 670, 671, 672]
+            
+            # Check if protocol version is supported
+            if protocol_version not in supported_versions:
+                # Log the actual protocol version for debugging
+                logger.warning(f"Client {addr} sent protocol version {protocol_version} (0x{protocol_version:04X})")
+                
+                # For now, accept any protocol version to test connection
+                logger.info(f"Accepting connection from {addr} with protocol {protocol_version} for testing")
+            else:
+                logger.info(f"Client {addr} using supported protocol version {protocol_version}")
             
             # Store pending connection
             self.pending_connections[addr] = {
