@@ -16,9 +16,14 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
-import yaml
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
+
+# Импорт сетевого модуля
+try:
+    from .network import MinecraftPENetworkProtocol
+except ImportError:
+    from network import MinecraftPENetworkProtocol
 
 # Настройка логирования
 logging.basicConfig(
@@ -45,6 +50,10 @@ class Player:
     experience: int = 0
     level: int = 0
     permissions: List[str] = None
+    online: bool = True
+    spawn_x: float = 0.0
+    spawn_y: float = 64.0
+    spawn_z: float = 0.0
     
     def __post_init__(self):
         if self.permissions is None:
@@ -77,9 +86,11 @@ class MinecraftPEServer:
         self.worlds: Dict[str, World] = {}
         self.plugins: List[str] = []
         self.start_time = None
-        self.max_players = self.config.get('max-players', 20)
+        
+        # Преобразование строковых значений в правильные типы
+        self.max_players = int(self.config.get('max-players', '20'))
         self.server_name = self.config.get('server-name', 'Minecraft PE Server')
-        self.server_port = self.config.get('server-port', 19132)
+        self.server_port = int(self.config.get('server-port', '19132'))
         
         # Статистика сервера
         self.stats = {
@@ -97,48 +108,112 @@ class MinecraftPEServer:
         # Загрузка плагинов
         self.load_plugins()
         
+        # Инициализация сетевого протокола
+        self.network = MinecraftPENetworkProtocol(self)
+        
         logger.info(f"Сервер {self.server_name} инициализирован")
     
     def load_config(self) -> Dict:
         """Загрузка конфигурации сервера"""
         try:
             config = {}
-            with open(self.config_path, 'r', encoding='utf-8') as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith('#') and '=' in line:
-                        key, value = line.split('=', 1)
-                        config[key.strip()] = value.strip()
+            if os.path.exists(self.config_path):
+                with open(self.config_path, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith('#') and '=' in line:
+                            key, value = line.split('=', 1)
+                            config[key.strip()] = value.strip()
+            
+            # Значения по умолчанию
+            defaults = {
+                'server-name': 'Minecraft PE Server',
+                'server-port': '19132',
+                'max-players': '20',
+                'gamemode': 'survival',
+                'difficulty': 'normal',
+                'level-name': 'world',
+                'level-type': 'default',
+                'level-seed': '0',
+                'spawn-protection': '16',
+                'hardcore': 'false',
+                'pvp': 'true'
+            }
+            
+            # Применение значений по умолчанию для отсутствующих ключей
+            for key, value in defaults.items():
+                if key not in config:
+                    config[key] = value
+            
             logger.info("Конфигурация загружена успешно")
             return config
         except Exception as e:
             logger.error(f"Ошибка загрузки конфигурации: {e}")
-            return {}
+            # Возвращаем значения по умолчанию при ошибке
+            return {
+                'server-name': 'Minecraft PE Server',
+                'server-port': '19132',
+                'max-players': '20',
+                'gamemode': 'survival',
+                'difficulty': 'normal',
+                'level-name': 'world',
+                'level-type': 'default',
+                'level-seed': '0',
+                'spawn-protection': '16',
+                'hardcore': 'false',
+                'pvp': 'true'
+            }
     
     def init_default_world(self):
         """Инициализация мира по умолчанию"""
-        default_world = World(
-            name=self.config.get('level-name', 'world'),
-            seed=int(self.config.get('level-seed', 0)) if self.config.get('level-seed') else 0,
-            world_type=self.config.get('level-type', 'default'),
-            difficulty=self.config.get('difficulty', 'normal'),
-            gamemode=self.config.get('gamemode', 'survival'),
-            hardcore=self.config.get('hardcore', 'false').lower() == 'true'
-        )
-        self.worlds[default_world.name] = default_world
-        logger.info(f"Мир '{default_world.name}' инициализирован")
+        try:
+            world_name = self.config.get('level-name', 'world')
+            world_seed = int(self.config.get('level-seed', '0'))
+            world_type = self.config.get('level-type', 'default')
+            difficulty = self.config.get('difficulty', 'normal')
+            gamemode = self.config.get('gamemode', 'survival')
+            hardcore = self.config.get('hardcore', 'false').lower() == 'true'
+            pvp = self.config.get('pvp', 'true').lower() == 'true'
+            
+            default_world = World(
+                name=world_name,
+                seed=world_seed,
+                world_type=world_type,
+                difficulty=difficulty,
+                gamemode=gamemode,
+                hardcore=hardcore,
+                pvp=pvp
+            )
+            self.worlds[default_world.name] = default_world
+            logger.info(f"Мир '{default_world.name}' инициализирован")
+        except Exception as e:
+            logger.error(f"Ошибка инициализации мира: {e}")
+            # Создаем мир по умолчанию при ошибке
+            default_world = World(
+                name='world',
+                seed=0,
+                world_type='default',
+                difficulty='normal',
+                gamemode='survival',
+                hardcore=False,
+                pvp=True
+            )
+            self.worlds[default_world.name] = default_world
     
     def load_plugins(self):
         """Загрузка плагинов"""
-        plugins_dir = Path("plugins")
-        if plugins_dir.exists():
-            for plugin_file in plugins_dir.glob("*.py"):
-                try:
-                    plugin_name = plugin_file.stem
-                    self.plugins.append(plugin_name)
-                    logger.info(f"Плагин '{plugin_name}' загружен")
-                except Exception as e:
-                    logger.error(f"Ошибка загрузки плагина {plugin_file}: {e}")
+        try:
+            plugins_dir = Path("plugins")
+            if plugins_dir.exists():
+                for plugin_file in plugins_dir.glob("*.py"):
+                    try:
+                        plugin_name = plugin_file.stem
+                        self.plugins.append(plugin_name)
+                        logger.info(f"Плагин '{plugin_name}' загружен")
+                    except Exception as e:
+                        logger.error(f"Ошибка загрузки плагина {plugin_file}: {e}")
+        except Exception as e:
+            logger.error(f"Ошибка загрузки плагинов: {e}")
     
     async def start(self):
         """Запуск сервера"""
@@ -150,12 +225,20 @@ class MinecraftPEServer:
         self.start_time = datetime.now()
         logger.info(f"Сервер {self.server_name} запускается...")
         
+        # Запуск сетевого протокола
+        try:
+            await self.network.start(port=self.server_port)
+            logger.info(f"Сетевой протокол запущен на порту {self.server_port}")
+        except Exception as e:
+            logger.error(f"Ошибка запуска сетевого протокола: {e}")
+            raise
+        
         # Запуск основных задач
         tasks = [
             asyncio.create_task(self.server_loop()),
             asyncio.create_task(self.monitoring_loop()),
             asyncio.create_task(self.backup_loop()),
-            asyncio.create_task(self.network_listener())
+            asyncio.create_task(self.cleanup_inactive_players())
         ]
         
         try:
@@ -172,6 +255,12 @@ class MinecraftPEServer:
         
         logger.info("Остановка сервера...")
         self.running = False
+        
+        # Остановка сетевого протокола
+        try:
+            await self.network.stop()
+        except Exception as e:
+            logger.error(f"Ошибка остановки сетевого протокола: {e}")
         
         # Отключение всех игроков
         for player in list(self.players.values()):
@@ -230,7 +319,7 @@ class MinecraftPEServer:
     
     async def backup_loop(self):
         """Цикл резервного копирования"""
-        backup_interval = int(self.config.get('backup-interval', 3600))
+        backup_interval = int(self.config.get('backup-interval', '3600'))
         
         while self.running:
             try:
@@ -242,18 +331,27 @@ class MinecraftPEServer:
             except Exception as e:
                 logger.error(f"Ошибка в цикле резервного копирования: {e}")
     
-    async def network_listener(self):
-        """Слушатель сетевых подключений"""
-        logger.info(f"Запуск сетевого слушателя на порту {self.server_port}")
-        
-        try:
-            # Здесь будет реализация сетевого протокола Minecraft PE
-            # Пока что просто заглушка
-            while self.running:
-                await asyncio.sleep(1)
+    async def cleanup_inactive_players(self):
+        """Очистка неактивных игроков"""
+        while self.running:
+            try:
+                await asyncio.sleep(60)  # Каждую минуту
                 
-        except Exception as e:
-            logger.error(f"Ошибка сетевого слушателя: {e}")
+                current_time = datetime.now()
+                inactive_players = []
+                
+                for username, player in self.players.items():
+                    # Проверяем активность игрока (5 минут)
+                    if (current_time - player.last_seen).total_seconds() > 300:
+                        inactive_players.append(username)
+                
+                # Отключаем неактивных игроков
+                for username in inactive_players:
+                    logger.info(f"Отключение неактивного игрока {username}")
+                    await self.player_leave(username)
+                    
+            except Exception as e:
+                logger.error(f"Ошибка в цикле очистки игроков: {e}")
     
     async def update_players(self):
         """Обновление состояния игроков"""
@@ -335,12 +433,19 @@ class MinecraftPEServer:
         if username in self.players:
             raise Exception("Игрок уже подключен")
         
+        # Получаем координаты спавна из мира
+        world = list(self.worlds.values())[0]
+        
         player = Player(
             username=username,
             uuid=self.generate_uuid(username),
             ip_address=ip_address,
             join_time=datetime.now(),
-            last_seen=datetime.now()
+            last_seen=datetime.now(),
+            online=True,
+            spawn_x=float(world.spawn_x),
+            spawn_y=float(world.spawn_y),
+            spawn_z=float(world.spawn_z)
         )
         
         self.players[username] = player
@@ -372,9 +477,9 @@ class MinecraftPEServer:
         
         # Телепортация на спавн
         world = list(self.worlds.values())[0]  # Первый мир
-        player.spawn_x = world.spawn_x
-        player.spawn_y = world.spawn_y
-        player.spawn_z = world.spawn_z
+        player.spawn_x = float(world.spawn_x)
+        player.spawn_y = float(world.spawn_y)
+        player.spawn_z = float(world.spawn_z)
         
         logger.info(f"Игрок {player.username} умер и возродился")
     
@@ -436,6 +541,20 @@ class MinecraftPEServer:
             'stats': self.stats,
             'uptime': self.stats['uptime']
         }
+    
+    async def broadcast_message(self, message: str):
+        """Отправка сообщения всем игрокам"""
+        if hasattr(self, 'network'):
+            await self.network.broadcast_message(message)
+    
+    async def send_message_to_player(self, username: str, message: str):
+        """Отправка сообщения конкретному игроку"""
+        if hasattr(self, 'network'):
+            # Находим клиента по имени пользователя
+            for client in self.network.clients.values():
+                if client.username == username:
+                    await self.network.send_message(client, message)
+                    break
 
 async def main():
     """Главная функция"""

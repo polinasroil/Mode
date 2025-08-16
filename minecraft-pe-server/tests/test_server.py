@@ -12,9 +12,10 @@ import tempfile
 import shutil
 from pathlib import Path
 from unittest.mock import Mock, patch
+import sys
+import os
 
 # Добавление пути к модулям сервера
-import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from server.main import MinecraftPEServer, Player, World
@@ -41,6 +42,7 @@ class TestPlayer:
         assert player.experience == 0
         assert player.level == 0
         assert player.permissions == ["player"]
+        assert player.online == True
     
     def test_player_defaults(self):
         """Тест значений по умолчанию для игрока"""
@@ -127,15 +129,18 @@ class TestMinecraftPEServer:
         config_file = Path(temp_dir) / "server.properties"
         
         # Создание тестового конфигурационного файла
-        config_content = """
-# Test configuration
+        config_content = """# Test configuration
 server-name=Test Server
 server-port=19132
 max-players=10
 gamemode=survival
 difficulty=normal
 level-name=test_world
-        """.strip()
+level-type=default
+level-seed=12345
+spawn-protection=16
+hardcore=false
+pvp=true"""
         
         with open(config_file, 'w') as f:
             f.write(config_content)
@@ -188,6 +193,7 @@ level-name=test_world
         assert world.difficulty == "normal"
         assert world.gamemode == "survival"
         assert world.hardcore == False
+        assert world.pvp == True
     
     def test_generate_uuid(self, server):
         """Тест генерации UUID"""
@@ -221,6 +227,7 @@ level-name=test_world
         assert player.ip_address == "192.168.1.100"
         assert player.username in server.players
         assert len(server.players) == 1
+        assert player.online == True
     
     @pytest.mark.asyncio
     async def test_player_join_duplicate(self, server):
@@ -380,14 +387,18 @@ class TestPerformance:
         server = MinecraftPEServer()
         
         # Проверяем, что сервер не потребляет слишком много памяти
-        import psutil
-        import os
-        
-        process = psutil.Process(os.getpid())
-        memory_mb = process.memory_info().rss / 1024 / 1024
-        
-        # Сервер должен потреблять менее 100MB памяти
-        assert memory_mb < 100
+        try:
+            import psutil
+            import os
+            
+            process = psutil.Process(os.getpid())
+            memory_mb = process.memory_info().rss / 1024 / 1024
+            
+            # Сервер должен потреблять менее 100MB памяти
+            assert memory_mb < 100
+        except ImportError:
+            # psutil не установлен, пропускаем тест
+            pytest.skip("psutil не установлен")
 
 if __name__ == "__main__":
     # Запуск тестов
