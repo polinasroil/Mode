@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Tuple
 from player import Player
 from packets import PacketHandler, PacketID, PlayStatus, GameMode, BlockID
 from world_generator import WorldGenerator, Biome
+from protocol.serializer import PacketSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -132,10 +133,10 @@ class PlayerManager:
         # Simplified resource packs info
         packet = bytearray()
         packet.append(PacketID.RESOURCE_PACKS_INFO_PACKET)
-        packet.extend(PacketHandler.PacketSerializer.write_bool(False))  # Must accept
-        packet.extend(PacketHandler.PacketSerializer.write_bool(False))  # Has scripts
-        packet.extend(PacketHandler.PacketSerializer.write_ushort(0))  # Behavior pack count
-        packet.extend(PacketHandler.PacketSerializer.write_ushort(0))  # Resource pack count
+        packet.extend(PacketSerializer.write_bool(False))  # Must accept
+        packet.extend(PacketSerializer.write_bool(False))  # Has scripts
+        packet.extend(PacketSerializer.write_ushort(0))  # Behavior pack count
+        packet.extend(PacketSerializer.write_ushort(0))  # Resource pack count
         
         await player.connection.send_packet(bytes(packet))
     
@@ -144,9 +145,9 @@ class PlayerManager:
         # Simplified resource pack stack
         packet = bytearray()
         packet.append(PacketID.RESOURCE_PACK_STACK_PACKET)
-        packet.extend(PacketHandler.PacketSerializer.write_bool(False))  # Must accept
-        packet.extend(PacketHandler.PacketSerializer.write_ushort(0))  # Behavior pack count
-        packet.extend(PacketHandler.PacketSerializer.write_ushort(0))  # Resource pack count
+        packet.extend(PacketSerializer.write_bool(False))  # Must accept
+        packet.extend(PacketSerializer.write_ushort(0))  # Behavior pack count
+        packet.extend(PacketSerializer.write_ushort(0))  # Resource pack count
         
         await player.connection.send_packet(bytes(packet))
     
@@ -212,7 +213,7 @@ class PlayerManager:
         # Send weather (clear)
         weather_packet = bytearray()
         weather_packet.append(PacketID.SET_TIME_PACKET)  # Reuse time packet ID for weather
-        weather_packet.extend(PacketHandler.PacketSerializer.write_int(0))  # Clear weather
+        weather_packet.extend(PacketSerializer.write_int(0))  # Clear weather
         await player.connection.send_packet(bytes(weather_packet))
     
     async def send_game_rules(self, player: Player):
@@ -220,7 +221,7 @@ class PlayerManager:
         # Simplified game rules
         packet = bytearray()
         packet.append(PacketID.SET_GAME_RULES_PACKET)
-        packet.extend(PacketHandler.PacketSerializer.write_uint(0))  # No rules
+        packet.extend(PacketSerializer.write_uint(0))  # No rules
         
         await player.connection.send_packet(bytes(packet))
     
@@ -273,32 +274,32 @@ class PlayerManager:
         packet.append(PacketID.ADD_PLAYER_PACKET)
         
         # Player UUID
-        packet.extend(PacketHandler.PacketSerializer.write_string(player.guid))
+        packet.extend(PacketSerializer.write_string(player.guid))
         
         # Player name
-        packet.extend(PacketHandler.PacketSerializer.write_string(player.username))
+        packet.extend(PacketSerializer.write_string(player.username))
         
         # Player position
-        packet.extend(PacketHandler.PacketSerializer.write_vector3f(player.x, player.y, player.z))
+        packet.extend(PacketSerializer.write_vector3f(player.x, player.y, player.z))
         
         # Player motion
-        packet.extend(PacketHandler.PacketSerializer.write_vector3f(0.0, 0.0, 0.0))
+        packet.extend(PacketSerializer.write_vector3f(0.0, 0.0, 0.0))
         
         # Player rotation
-        packet.extend(PacketHandler.PacketSerializer.write_float(player.pitch))
-        packet.extend(PacketHandler.PacketSerializer.write_float(player.yaw))
-        packet.extend(PacketHandler.PacketSerializer.write_float(player.yaw))  # Head yaw
+        packet.extend(PacketSerializer.write_float(player.pitch))
+        packet.extend(PacketSerializer.write_float(player.yaw))
+        packet.extend(PacketSerializer.write_float(player.yaw))  # Head yaw
         
         # Player data
-        packet.extend(PacketHandler.PacketSerializer.write_uint(0))  # Flags
-        packet.extend(PacketHandler.PacketSerializer.write_uint(0))  # Command permission
-        packet.extend(PacketHandler.PacketSerializer.write_uint(0))  # Action permissions
-        packet.extend(PacketHandler.PacketSerializer.write_uint(0))  # Permission level
-        packet.extend(PacketHandler.PacketSerializer.write_uint(0))  # Custom stored permissions
-        packet.extend(PacketHandler.PacketSerializer.write_uint(0))  # User ID
+        packet.extend(PacketSerializer.write_uint(0))  # Flags
+        packet.extend(PacketSerializer.write_uint(0))  # Command permission
+        packet.extend(PacketSerializer.write_uint(0))  # Action permissions
+        packet.extend(PacketSerializer.write_uint(0))  # Permission level
+        packet.extend(PacketSerializer.write_uint(0))  # Custom stored permissions
+        packet.extend(PacketSerializer.write_uint(0))  # User ID
         
         # Entity links
-        packet.extend(PacketHandler.PacketSerializer.write_uint(0))  # Entity links count
+        packet.extend(PacketSerializer.write_uint(0))  # Entity links count
         
         # Send to all other players
         for other_player in self.players.values():
@@ -314,32 +315,32 @@ class PlayerManager:
                 packet.append(PacketID.ADD_PLAYER_PACKET)
                 
                 # Player UUID
-                packet.extend(PacketHandler.PacketSerializer.write_string(other_player.guid))
+                packet.extend(PacketSerializer.write_string(other_player.guid))
                 
                 # Player name
-                packet.extend(PacketHandler.PacketSerializer.write_string(other_player.username))
+                packet.extend(PacketSerializer.write_string(other_player.username))
                 
                 # Player position
-                packet.extend(PacketHandler.PacketSerializer.write_vector3f(other_player.x, other_player.y, other_player.z))
+                packet.extend(PacketSerializer.write_vector3f(other_player.x, other_player.y, other_player.z))
                 
                 # Player motion
-                packet.extend(PacketHandler.PacketSerializer.write_vector3f(0.0, 0.0, 0.0))
+                packet.extend(PacketSerializer.write_vector3f(0.0, 0.0, 0.0))
                 
                 # Player rotation
-                packet.extend(PacketHandler.PacketSerializer.write_float(other_player.pitch))
-                packet.extend(PacketHandler.PacketSerializer.write_float(other_player.yaw))
-                packet.extend(PacketHandler.PacketSerializer.write_float(other_player.yaw))  # Head yaw
+                packet.extend(PacketSerializer.write_float(other_player.pitch))
+                packet.extend(PacketSerializer.write_float(other_player.yaw))
+                packet.extend(PacketSerializer.write_float(other_player.yaw))  # Head yaw
                 
                 # Player data
-                packet.extend(PacketHandler.PacketSerializer.write_uint(0))  # Flags
-                packet.extend(PacketHandler.PacketSerializer.write_uint(0))  # Command permission
-                packet.extend(PacketHandler.PacketSerializer.write_uint(0))  # Action permissions
-                packet.extend(PacketHandler.PacketSerializer.write_uint(0))  # Permission level
-                packet.extend(PacketHandler.PacketSerializer.write_uint(0))  # Custom stored permissions
-                packet.extend(PacketHandler.PacketSerializer.write_uint(0))  # User ID
+                packet.extend(PacketSerializer.write_uint(0))  # Flags
+                packet.extend(PacketSerializer.write_uint(0))  # Command permission
+                packet.extend(PacketSerializer.write_uint(0))  # Action permissions
+                packet.extend(PacketSerializer.write_uint(0))  # Permission level
+                packet.extend(PacketSerializer.write_uint(0))  # Custom stored permissions
+                packet.extend(PacketSerializer.write_uint(0))  # User ID
                 
                 # Entity links
-                packet.extend(PacketHandler.PacketSerializer.write_uint(0))  # Entity links count
+                packet.extend(PacketSerializer.write_uint(0))  # Entity links count
                 
                 await player.connection.send_packet(bytes(packet))
     
@@ -355,12 +356,12 @@ class PlayerManager:
     
     async def disconnect_player(self, player: Player, reason: str = "Disconnected"):
         """Disconnect a player"""
-        try:
+                try:
             # Send disconnect packet
             packet = bytearray()
             packet.append(PacketID.DISCONNECT_PACKET)
-            packet.extend(PacketHandler.PacketSerializer.write_string(reason))
-            packet.extend(PacketHandler.PacketSerializer.write_bool(False))  # Hide disconnect screen
+            packet.extend(PacketSerializer.write_string(reason))
+            packet.extend(PacketSerializer.write_bool(False))  # Hide disconnect screen
             
             await player.connection.send_packet(bytes(packet))
             

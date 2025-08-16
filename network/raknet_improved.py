@@ -247,7 +247,7 @@ class RakNetImproved:
                 response = bytearray()
                 response.append(self.ID_INCOMPATIBLE_PROTOCOL_VERSION)
                 response.extend(struct.pack('<Q', self.server_guid))
-                response.extend(struct.pack('<B', self.protocol_version))
+                response.extend(struct.pack('<H', self.protocol_version))
                 await self.send_packet(bytes(response), addr)
                 logger.info(f"Rejected connection from {addr} - incompatible protocol {protocol_version}")
                 return
