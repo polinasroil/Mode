@@ -21,10 +21,10 @@ from datetime import datetime, timedelta
 
 # Импорт модулей
 try:
-    from .raknet import RakNetProtocol
+    from .bedrock_protocol import BedrockProtocol
     from .world import World, WorldGenerator
 except ImportError:
-    from raknet import RakNetProtocol
+    from bedrock_protocol import BedrockProtocol
     from world import World, WorldGenerator
 
 # Настройка логирования
@@ -94,8 +94,8 @@ class MinecraftPEServer:
         # Загрузка плагинов
         self.load_plugins()
         
-        # Инициализация RakNet протокола
-        self.network = RakNetProtocol(self)
+        # Инициализация Bedrock протокола
+        self.network = BedrockProtocol(self)
         
         logger.info(f"Сервер {self.server_name} инициализирован")
     
@@ -284,14 +284,14 @@ log-file=server.log
         # Загрузка/генерация миров
         await self.load_worlds()
         
-        # Запуск RakNet протокола
+        # Запуск Bedrock протокола
         try:
             # Запуск сетевого протокола
             await self.network.start(port=self.server_port)
-            logger.info(f"RakNet протокол запущен на порту {self.server_port}")
+            logger.info(f"Bedrock протокол запущен на порту {self.server_port}")
             
         except Exception as e:
-            logger.error(f"Ошибка запуска RakNet протокола: {e}")
+            logger.error(f"Ошибка запуска Bedrock протокола: {e}")
             raise
         
         # Запуск основных задач
@@ -336,11 +336,11 @@ log-file=server.log
         logger.info("Остановка сервера...")
         self.running = False
         
-        # Остановка RakNet протокола
+        # Остановка Bedrock протокола
         try:
             await self.network.stop()
         except Exception as e:
-            logger.error(f"Ошибка остановки RakNet протокола: {e}")
+            logger.error(f"Ошибка остановки Bedrock протокола: {e}")
         
         # Отключение всех игроков
         for player in list(self.players.values()):
@@ -488,15 +488,31 @@ log-file=server.log
     def monitor_resources(self):
         """Мониторинг ресурсов системы"""
         try:
-            import psutil
+            # Простая реализация без psutil для Termux
+            import os
+            import time
             
-            process = psutil.Process()
-            self.stats['memory_usage'] = process.memory_info().rss / 1024 / 1024  # MB
-            self.stats['cpu_usage'] = process.cpu_percent()
+            # Получение информации о процессе
+            pid = os.getpid()
             
-        except ImportError:
-            # psutil не установлен
-            pass
+            # Попытка получить информацию о памяти из /proc
+            try:
+                with open(f'/proc/{pid}/status', 'r') as f:
+                    for line in f:
+                        if line.startswith('VmRSS:'):
+                            memory_kb = int(line.split()[1])
+                            self.stats['memory_usage'] = memory_kb / 1024  # MB
+                            break
+            except:
+                self.stats['memory_usage'] = 0
+            
+            # Простая оценка CPU
+            self.stats['cpu_usage'] = 0
+            
+        except Exception as e:
+            # Игнорируем ошибки мониторинга
+            self.stats['memory_usage'] = 0
+            self.stats['cpu_usage'] = 0
     
     async def health_check(self):
         """Проверка состояния сервера"""
@@ -673,7 +689,7 @@ log-file=server.log
         for world_name, world in self.worlds.items():
             worlds_info[world_name] = world.get_world_info()
         
-        # Добавление информации о RakNet
+        # Добавление информации о Bedrock
         network_info = self.network.get_server_info() if hasattr(self, 'network') else {}
         
         return {
