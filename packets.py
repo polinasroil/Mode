@@ -1,0 +1,16 @@
+# Minimal subset of Bedrock packet IDs for MVP
+
+class PacketID:
+	# Login/Status
+	PLAY_STATUS = 0x02
+	SERVER_TO_CLIENT_HANDSHAKE = 0x03
+	CLIENT_TO_SERVER_HANDSHAKE = 0x04
+	DISCONNECT = 0x05
+	TEXT = 0x09
+	START_GAME = 0x0b
+	ADD_PLAYER = 0x0c
+	MOVE_PLAYER = 0x13
+	PLAYER_ACTION = 0x24
+	LEVEL_CHUNK = 0x3a
+	UPDATE_BLOCK = 0x15
+	BATCH = 0xfe
