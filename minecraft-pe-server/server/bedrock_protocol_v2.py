@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Minecraft PE Server - Bedrock протокол v2.0 (полная реализация)
+Minecraft PE Server - Bedrock протокол v2.0 (исправленная версия)
 Автор: Minecraft PE Server Team
-Версия: 2.0.0
+Версия: 2.0.1
 Основано на официальной спецификации Minecraft Bedrock
 """
 
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 BEDROCK_PROTOCOL_VERSION = 662  # Minecraft PE 1.20.50
 BEDROCK_GAME_VERSION = "1.20.50"
 
-# Bedrock Packet IDs (Official Specification)
+# Bedrock Packet IDs (Official Specification) - ИСПРАВЛЕНО
 ID_LOGIN = 0x01
 ID_PLAY_STATUS = 0x02
 ID_DISCONNECT = 0x05
@@ -48,21 +48,23 @@ ID_SET_PLAYER_INVENTORY_SLOT = 0x37
 ID_SET_HEALTH = 0x42
 ID_SET_EXPERIENCE = 0x48
 ID_SET_PLAYER_ABILITIES = 0x3D
-ID_SET_PLAYER_PERMISSIONS = 0x72
-ID_SET_ENTITY_MOTION = 0x28
-ID_SET_ENTITY_POSITION = 0x29
-ID_SET_ENTITY_POSITION_AND_ROTATION = 0x2A
-ID_SET_PLAYER_ACTION = 0x30
-ID_SET_PLAYER_INPUT = 0x31
-ID_SET_PLAYER_MOVEMENT = 0x32
-ID_SET_PLAYER_ROTATION = 0x33
-ID_SET_PLAYER_POSITION = 0x34
-ID_SET_PLAYER_POSITION_AND_ROTATION = 0x35
-ID_SET_PLAYER_POSITION_AND_MOTION = 0x36
+
+# Действия игрока (правильные ID)
+ID_PLAYER_ACTION = 0x30
+ID_PLAYER_INPUT = 0x31
+ID_PLAYER_MOVEMENT = 0x32
+ID_PLAYER_ROTATION = 0x33
+ID_PLAYER_POSITION = 0x34
+ID_PLAYER_POSITION_AND_ROTATION = 0x35
+ID_PLAYER_POSITION_AND_MOTION = 0x36
+
+# Инвентарь и эффекты
 ID_SET_PLAYER_INVENTORY = 0x38
 ID_SET_PLAYER_ARMOR = 0x39
 ID_SET_PLAYER_EFFECTS = 0x3A
 ID_SET_PLAYER_ATTRIBUTES = 0x3B
+
+# Права и разрешения (исправлено)
 ID_SET_PLAYER_PERMISSIONS = 0x72
 ID_SET_PLAYER_PERMISSIONS_LEVEL = 0x73
 ID_SET_PLAYER_PERMISSIONS_OP = 0x74
@@ -76,6 +78,33 @@ ID_SET_PLAYER_PERMISSIONS_OP_LEVEL_1 = 0x7B
 ID_SET_PLAYER_PERMISSIONS_OP_LEVEL_2 = 0x7C
 ID_SET_PLAYER_PERMISSIONS_OP_LEVEL_3 = 0x7D
 ID_SET_PLAYER_PERMISSIONS_OP_LEVEL_4 = 0x7E
+
+# Дополнительные пакеты для полноценной работы
+ID_ADD_ENTITY = 0x0F
+ID_REMOVE_ENTITY = 0x0E
+ID_MOVE_ENTITY = 0x12
+ID_ROTATE_HEAD = 0x19
+ID_SET_ENTITY_MOTION = 0x28
+ID_SET_ENTITY_POSITION = 0x29
+ID_SET_ENTITY_POSITION_AND_ROTATION = 0x2A
+ID_SET_ENTITY_ROTATION = 0x2C
+ID_SET_ENTITY_DATA = 0x27
+ID_SET_ENTITY_LINK = 0x25
+ID_SET_ENTITY_COLLISION = 0x26
+ID_SET_ENTITY_INVULNERABLE = 0x2D
+ID_SET_ENTITY_VELOCITY = 0x2E
+ID_SET_ENTITY_FALL_DISTANCE = 0x2F
+ID_SET_ENTITY_ON_FIRE = 0x40
+ID_SET_ENTITY_NO_AI = 0x41
+ID_SET_ENTITY_PASSENGER = 0x43
+ID_SET_ENTITY_RIDING = 0x44
+ID_SET_ENTITY_SITTING = 0x45
+ID_SET_ENTITY_SLEEPING = 0x46
+ID_SET_ENTITY_SNEAKING = 0x47
+ID_SET_ENTITY_SPRINTING = 0x48
+ID_SET_ENTITY_SWIMMING = 0x49
+ID_SET_ENTITY_TELEPORTING = 0x4A
+ID_SET_ENTITY_TICKING = 0x4B
 
 @dataclass
 class BedrockSession:
@@ -254,19 +283,19 @@ class BedrockProtocolV2:
                 await self.handle_ping(data, addr)
             elif packet_id == 0x03:  # Connected Pong
                 await self.handle_pong(data, addr)
-            elif packet_id == ID_SET_PLAYER_ACTION:
+            elif packet_id == ID_PLAYER_ACTION:
                 await self.handle_player_action(data, addr)
-            elif packet_id == ID_SET_PLAYER_INPUT:
+            elif packet_id == ID_PLAYER_INPUT:
                 await self.handle_player_input(data, addr)
-            elif packet_id == ID_SET_PLAYER_MOVEMENT:
+            elif packet_id == ID_PLAYER_MOVEMENT:
                 await self.handle_player_movement(data, addr)
-            elif packet_id == ID_SET_PLAYER_ROTATION:
+            elif packet_id == ID_PLAYER_ROTATION:
                 await self.handle_player_rotation(data, addr)
-            elif packet_id == ID_SET_PLAYER_POSITION:
+            elif packet_id == ID_PLAYER_POSITION:
                 await self.handle_player_position(data, addr)
-            elif packet_id == ID_SET_PLAYER_POSITION_AND_ROTATION:
+            elif packet_id == ID_PLAYER_POSITION_AND_ROTATION:
                 await self.handle_player_position_and_rotation(data, addr)
-            elif packet_id == ID_SET_PLAYER_POSITION_AND_MOTION:
+            elif packet_id == ID_PLAYER_POSITION_AND_MOTION:
                 await self.handle_player_position_and_motion(data, addr)
             elif packet_id == ID_SET_PLAYER_INVENTORY:
                 await self.handle_player_inventory(data, addr)

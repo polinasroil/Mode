@@ -424,7 +424,10 @@ class RakNetProtocol:
         try:
             # ACK подтверждает получение пакетов
             # Здесь можно добавить логику подтверждения отправленных пакетов
-            pass
+            session = self.sessions.get(addr)
+            if session:
+                session.last_pong = time.time()
+                logger.debug(f"Получен ACK от {addr}")
             
         except Exception as e:
             logger.error(f"Ошибка обработки ACK: {e}")
@@ -434,7 +437,9 @@ class RakNetProtocol:
         try:
             # NACK указывает на потерю пакетов
             # Здесь можно добавить логику повторной отправки
-            pass
+            session = self.sessions.get(addr)
+            if session:
+                logger.debug(f"Получен NACK от {addr}, требуется повторная отправка")
             
         except Exception as e:
             logger.error(f"Ошибка обработки NACK: {e}")
