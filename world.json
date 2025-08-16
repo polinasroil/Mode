@@ -1,0 +1,10 @@
+{
+  "seed": 690751,
+  "spawn_x": 0,
+  "spawn_y": 64,
+  "spawn_z": 0,
+  "time": 0,
+  "weather": 0,
+  "world_name": "PythonBedrockWorld",
+  "chunks": {}
+}
