@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any
 
 from aiogram import Bot, Dispatcher, types
-from aiogram.filters import Command, Text
+from aiogram.filters import Command, MagicData
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -41,6 +41,11 @@ user_states: Dict[int, Dict[str, Any]] = {}
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     """Обработчик команды /start"""
+    # Проверяем, есть ли параметры в команде start
+    if message.text.startswith("/start duel_"):
+        await start_with_params(message)
+        return
+    
     user = message.from_user
     
     # Создаем или получаем игрока
@@ -100,7 +105,7 @@ async def cmd_balance(message: types.Message):
         await message.answer("❌ Баланс не найден")
 
 # Обработчики callback'ов
-@dp.callback_query(Text("game_bot"))
+@dp.callback_query(MagicData.F.callback_data == "game_bot")
 async def game_bot_handler(callback: types.CallbackQuery):
     """Обработчик выбора игры с ботом"""
     await callback.answer()
@@ -120,7 +125,7 @@ async def game_bot_handler(callback: types.CallbackQuery):
         reply_markup=get_bet_keyboard()
     )
 
-@dp.callback_query(Text(startswith="bet_"))
+@dp.callback_query(MagicData.F.callback_data.startswith("bet_"))
 async def bet_handler(callback: types.CallbackQuery):
     """Обработчик выбора ставки"""
     await callback.answer()
@@ -152,7 +157,7 @@ async def bet_handler(callback: types.CallbackQuery):
         reply_markup=get_coin_choice_keyboard()
     )
 
-@dp.callback_query(Text("custom_bet"))
+@dp.callback_query(MagicData.F.callback_data == "custom_bet")
 async def custom_bet_handler(callback: types.CallbackQuery):
     """Обработчик кастомной ставки"""
     await callback.answer()
@@ -167,7 +172,7 @@ async def custom_bet_handler(callback: types.CallbackQuery):
         reply_markup=get_cancel_keyboard()
     )
 
-@dp.callback_query(Text(startswith="choice_"))
+@dp.callback_query(MagicData.F.callback_data.startswith("choice_"))
 async def choice_handler(callback: types.CallbackQuery):
     """Обработчик выбора стороны монеты"""
     await callback.answer()
@@ -230,7 +235,7 @@ async def choice_handler(callback: types.CallbackQuery):
     if user_id in user_states:
         del user_states[user_id]
 
-@dp.callback_query(Text("create_duel"))
+@dp.callback_query(MagicData.F.callback_data == "create_duel")
 async def create_duel_handler(callback: types.CallbackQuery):
     """Обработчик создания дуэли"""
     await callback.answer()
@@ -260,7 +265,7 @@ async def create_duel_handler(callback: types.CallbackQuery):
         parse_mode="Markdown"
     )
 
-@dp.callback_query(Text("stats"))
+@dp.callback_query(MagicData.F.callback_data == "stats")
 async def stats_handler(callback: types.CallbackQuery):
     """Обработчик статистики"""
     await callback.answer()
@@ -283,7 +288,7 @@ async def stats_handler(callback: types.CallbackQuery):
             reply_markup=get_main_menu_keyboard()
         )
 
-@dp.callback_query(Text("help"))
+@dp.callback_query(MagicData.F.callback_data == "help")
 async def help_handler(callback: types.CallbackQuery):
     """Обработчик помощи"""
     await callback.answer()
@@ -295,7 +300,7 @@ async def help_handler(callback: types.CallbackQuery):
         parse_mode="HTML"
     )
 
-@dp.callback_query(Text("back_to_main"))
+@dp.callback_query(MagicData.F.callback_data == "back_to_main")
 async def back_to_main_handler(callback: types.CallbackQuery):
     """Обработчик возврата в главное меню"""
     await callback.answer()
@@ -310,7 +315,7 @@ async def back_to_main_handler(callback: types.CallbackQuery):
         reply_markup=get_main_menu_keyboard()
     )
 
-@dp.callback_query(Text("cancel"))
+@dp.callback_query(MagicData.F.callback_data == "cancel")
 async def cancel_handler(callback: types.CallbackQuery):
     """Обработчик отмены"""
     await callback.answer()
@@ -325,7 +330,7 @@ async def cancel_handler(callback: types.CallbackQuery):
         reply_markup=get_main_menu_keyboard()
     )
 
-@dp.callback_query(Text("cancel_duel"))
+@dp.callback_query(MagicData.F.callback_data == "cancel_duel")
 async def cancel_duel_handler(callback: types.CallbackQuery):
     """Обработчик отмены дуэли"""
     await callback.answer()
@@ -341,7 +346,7 @@ async def cancel_duel_handler(callback: types.CallbackQuery):
     )
 
 # Обработчик дуэлей
-@dp.callback_query(Text(startswith="accept_duel_"))
+@dp.callback_query(MagicData.F.callback_data.startswith("accept_duel_"))
 async def accept_duel_handler(callback: types.CallbackQuery):
     """Обработчик принятия дуэли"""
     await callback.answer()
@@ -379,7 +384,7 @@ async def accept_duel_handler(callback: types.CallbackQuery):
         reply_markup=get_duel_bet_keyboard(duel_id)
     )
 
-@dp.callback_query(Text(startswith="decline_duel_"))
+@dp.callback_query(MagicData.F.callback_data.startswith("decline_duel_"))
 async def decline_duel_handler(callback: types.CallbackQuery):
     """Обработчик отклонения дуэли"""
     await callback.answer()
@@ -389,7 +394,7 @@ async def decline_duel_handler(callback: types.CallbackQuery):
         reply_markup=get_main_menu_keyboard()
     )
 
-@dp.callback_query(Text(startswith="duel_bet_"))
+@dp.callback_query(MagicData.F.callback_data.startswith("duel_bet_"))
 async def duel_bet_handler(callback: types.CallbackQuery):
     """Обработчик ставки в дуэли"""
     await callback.answer()
@@ -435,7 +440,7 @@ async def duel_bet_handler(callback: types.CallbackQuery):
             reply_markup=get_duel_waiting_keyboard()
         )
 
-@dp.callback_query(Text(startswith="duel_choice_"))
+@dp.callback_query(MagicData.F.callback_data.startswith("duel_choice_"))
 async def duel_choice_handler(callback: types.CallbackQuery):
     """Обработчик выбора в дуэли"""
     await callback.answer()
@@ -557,7 +562,6 @@ async def inline_query_handler(query: InlineQuery):
         await query.answer([result])
 
 # Обработчик команды start с параметрами (для дуэлей)
-@dp.message(Command("start"))
 async def start_with_params(message: types.Message):
     """Обработчик команды start с параметрами"""
     if message.text.startswith("/start duel_"):
