@@ -55,6 +55,8 @@ class MinecraftPENetworkProtocol:
     PACKET_MOVE_PLAYER = 0x13
     PACKET_LEVEL_CHUNK = 0x3A
     PACKET_SET_ENTITY_DATA = 0x27
+    PACKET_PLAYER_SPAWN = 0x0E
+    PACKET_UPDATE_BLOCK = 0x15
     
     def __init__(self, server):
         self.server = server
@@ -128,6 +130,8 @@ class MinecraftPENetworkProtocol:
                 await self.handle_text(data, addr)
             elif packet_type == self.PACKET_MOVE_PLAYER:
                 await self.handle_move_player(data, addr)
+            elif packet_type == self.PACKET_UPDATE_BLOCK:
+                await self.handle_update_block(data, addr)
             else:
                 # Логирование неизвестного пакета
                 logger.debug(f"Неизвестный пакет типа {packet_type} от {addr}")
@@ -156,6 +160,12 @@ class MinecraftPENetworkProtocol:
             
             # Отправка информации о мире
             await self.send_start_game(client)
+            
+            # Отправка точки спавна
+            await self.send_player_spawn(client)
+            
+            # Отправка ближайших чанков
+            await self.send_nearby_chunks(client)
             
             # Уведомление других игроков
             await self.broadcast_player_join(username)
@@ -240,6 +250,34 @@ class MinecraftPENetworkProtocol:
         except Exception as e:
             logger.error(f"Ошибка обработки движения: {e}")
     
+    async def handle_update_block(self, data: bytes, addr: Tuple[str, int]):
+        """Обработка обновления блока"""
+        try:
+            client = self.find_client_by_addr(addr)
+            if not client:
+                return
+            
+            # Парсинг данных блока
+            if len(data) >= 13:
+                x = struct.unpack('>i', data[1:5])[0]
+                y = struct.unpack('>B', data[5:6])[0]
+                z = struct.unpack('>i', data[6:10])[0]
+                block_id = struct.unpack('>B', data[10:11])[0]
+                metadata = struct.unpack('>B', data[11:12])[0]
+                
+                # Обновление блока в мире
+                if hasattr(self.server, 'worlds') and self.server.worlds:
+                    world = list(self.server.worlds.values())[0]
+                    world.set_block(x, y, z, block_id, metadata)
+                    
+                    # Отправка обновления всем игрокам
+                    await self.broadcast_block_update(x, y, z, block_id, metadata)
+                    
+                    logger.debug(f"Блок обновлен: {x}, {y}, {z} -> {block_id}")
+                
+        except Exception as e:
+            logger.error(f"Ошибка обработки обновления блока: {e}")
+    
     def parse_move_data(self, data: bytes) -> Tuple[float, float, float]:
         """Парсинг данных движения"""
         try:
@@ -262,11 +300,17 @@ class MinecraftPENetworkProtocol:
             args = parts[1:] if len(parts) > 1 else []
             
             if cmd == '/help':
-                await self.send_message(client, "Доступные команды: /help, /time, /weather, /tp")
+                await self.send_message(client, "Доступные команды: /help, /time, /weather, /tp, /block, /chunk")
             elif cmd == '/time':
-                await self.send_message(client, f"Время: {self.server.worlds['world'].time}")
+                if hasattr(self.server, 'worlds') and self.server.worlds:
+                    world = list(self.server.worlds.values())[0]
+                    time_str = world.get_time_string()
+                    await self.send_message(client, f"Время: {time_str}")
             elif cmd == '/weather':
-                await self.send_message(client, f"Погода: {self.server.worlds['world'].weather}")
+                if hasattr(self.server, 'worlds') and self.server.worlds:
+                    world = list(self.server.worlds.values())[0]
+                    weather_str = world.get_weather_string()
+                    await self.send_message(client, f"Погода: {weather_str}")
             elif cmd == '/tp' and len(args) >= 3:
                 try:
                     x, y, z = map(float, args[:3])
@@ -274,6 +318,24 @@ class MinecraftPENetworkProtocol:
                     await self.send_message(client, f"Телепортация на координаты {x}, {y}, {z}")
                 except ValueError:
                     await self.send_message(client, "Неверные координаты")
+            elif cmd == '/block' and len(args) >= 4:
+                try:
+                    x, y, z, block_id = map(int, args[:4])
+                    metadata = int(args[4]) if len(args) > 4 else 0
+                    
+                    # Установка блока
+                    if hasattr(self.server, 'worlds') and self.server.worlds:
+                        world = list(self.server.worlds.values())[0]
+                        world.set_block(x, y, z, block_id, metadata)
+                        await self.broadcast_block_update(x, y, z, block_id, metadata)
+                        await self.send_message(client, f"Блок установлен: {x}, {y}, {z} -> {block_id}")
+                except ValueError:
+                    await self.send_message(client, "Неверные параметры блока")
+            elif cmd == '/chunk':
+                if hasattr(self.server, 'worlds') and self.server.worlds:
+                    world = list(self.server.worlds.values())[0]
+                    chunk_info = f"Загружено чанков: {len(world.loaded_chunks)}"
+                    await self.send_message(client, chunk_info)
             else:
                 await self.send_message(client, f"Неизвестная команда: {cmd}")
                 
@@ -296,22 +358,69 @@ class MinecraftPENetworkProtocol:
     async def send_start_game(self, client: 'MinecraftPEClient'):
         """Отправка информации о начале игры"""
         try:
-            # Базовая информация о мире
-            world = list(self.server.worlds.values())[0]
-            
-            # Создание пакета начала игры
-            packet_data = struct.pack('>I', world.seed)
-            packet_data += struct.pack('>B', 0)  # Gamemode
-            packet_data += struct.pack('>B', 0)  # Entity ID
-            packet_data += struct.pack('>f', 0.0)  # Spawn X
-            packet_data += struct.pack('>f', 64.0)  # Spawn Y
-            packet_data += struct.pack('>f', 0.0)  # Spawn Z
-            
-            packet = Packet(self.PACKET_START_GAME, packet_data)
-            await self.send_packet(client.addr, packet)
+            if hasattr(self.server, 'worlds') and self.server.worlds:
+                world = list(self.server.worlds.values())[0]
+                
+                # Создание пакета начала игры
+                packet_data = struct.pack('>I', world.seed)
+                packet_data += struct.pack('>B', 0)  # Gamemode
+                packet_data += struct.pack('>B', 0)  # Entity ID
+                packet_data += struct.pack('>f', float(world.spawn_x))
+                packet_data += struct.pack('>f', float(world.spawn_y))
+                packet_data += struct.pack('>f', float(world.spawn_z))
+                
+                packet = Packet(self.PACKET_START_GAME, packet_data)
+                await self.send_packet(client.addr, packet)
             
         except Exception as e:
             logger.error(f"Ошибка отправки начала игры: {e}")
+    
+    async def send_player_spawn(self, client: 'MinecraftPEClient'):
+        """Отправка точки спавна игрока"""
+        try:
+            if hasattr(self.server, 'worlds') and self.server.worlds:
+                world = list(self.server.worlds.values())[0]
+                
+                # Пакет спавна игрока
+                packet_data = struct.pack('>f', float(world.spawn_x))
+                packet_data += struct.pack('>f', float(world.spawn_y))
+                packet_data += struct.pack('>f', float(world.spawn_z))
+                
+                packet = Packet(self.PACKET_PLAYER_SPAWN, packet_data)
+                await self.send_packet(client.addr, packet)
+                
+        except Exception as e:
+            logger.error(f"Ошибка отправки спавна игрока: {e}")
+    
+    async def send_nearby_chunks(self, client: 'MinecraftPEClient'):
+        """Отправка ближайших чанков"""
+        try:
+            if hasattr(self.server, 'worlds') and self.server.worlds:
+                world = list(self.server.worlds.values())[0]
+                
+                # Отправка чанков в радиусе 2 от спавна
+                spawn_chunk_x = world.spawn_x // 16
+                spawn_chunk_z = world.spawn_z // 16
+                
+                for chunk_x in range(spawn_chunk_x - 2, spawn_chunk_x + 3):
+                    for chunk_z in range(spawn_chunk_z - 2, spawn_chunk_z + 3):
+                        chunk = world.get_chunk(chunk_x, chunk_z)
+                        if chunk:
+                            await self.send_chunk(client, chunk)
+                            
+        except Exception as e:
+            logger.error(f"Ошибка отправки чанков: {e}")
+    
+    async def send_chunk(self, client: 'MinecraftPEClient', chunk):
+        """Отправка чанка клиенту"""
+        try:
+            chunk_data = chunk.get_chunk_data()
+            if chunk_data:
+                packet = Packet(self.PACKET_LEVEL_CHUNK, chunk_data)
+                await self.send_packet(client.addr, packet)
+                
+        except Exception as e:
+            logger.error(f"Ошибка отправки чанка: {e}")
     
     async def send_disconnect(self, addr: Tuple[str, int], reason: str):
         """Отправка отключения"""
@@ -347,6 +456,25 @@ class MinecraftPENetworkProtocol:
         """Уведомление о движении игрока"""
         # В реальной реализации здесь будет отправка пакета движения
         pass
+    
+    async def broadcast_block_update(self, x: int, y: int, z: int, block_id: int, metadata: int):
+        """Уведомление об обновлении блока"""
+        try:
+            # Создание пакета обновления блока
+            packet_data = struct.pack('>i', x)
+            packet_data += struct.pack('>B', y)
+            packet_data += struct.pack('>i', z)
+            packet_data += struct.pack('>B', block_id)
+            packet_data += struct.pack('>B', metadata)
+            
+            packet = Packet(self.PACKET_UPDATE_BLOCK, packet_data)
+            
+            # Отправка всем клиентам
+            for client in self.clients.values():
+                await self.send_packet(client.addr, packet)
+                
+        except Exception as e:
+            logger.error(f"Ошибка отправки обновления блока: {e}")
     
     async def send_packet(self, addr: Tuple[str, int], packet: Packet):
         """Отправка пакета клиенту"""
