@@ -127,6 +127,7 @@ class RakNetServer:
                 await self.handle_open_connection_request_1(data, addr)
             elif packet_id == self.ID_OPEN_CONNECTION_REQUEST_2:
                 await self.handle_open_connection_request_2(data, addr)
+                logger.info(f"Handled open connection request 2 from {addr}")
             elif packet_id == self.ID_CONNECTION_REQUEST:
                 await self.handle_connection_request(data, addr)
             elif packet_id == self.ID_NEW_INCOMING_CONNECTION:
@@ -224,7 +225,7 @@ class RakNetServer:
             response.extend(b'\x00' * 16)  # Security cookie
             
             await self.send_packet(bytes(response), addr)
-            logger.debug(f"Sent open connection reply 2 to {addr}")
+            logger.info(f"Sent open connection reply 2 to {addr}")
             
         except Exception as e:
             logger.error(f"Error handling open connection request 2: {e}")
@@ -305,6 +306,7 @@ class RakNetServer:
         try:
             loop = asyncio.get_event_loop()
             await loop.sock_sendto(self.socket, data, addr)
+            logger.info(f"Sent packet to {addr}: {len(data)} bytes")
         except Exception as e:
             logger.error(f"Error sending packet to {addr}: {e}")
     

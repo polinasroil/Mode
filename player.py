@@ -20,6 +20,7 @@ class Player:
         self.connection = connection
         self.guid = self._generate_guid()
         self.username = f"Player_{self.guid[:8]}"
+        self.entity_id = int(self.guid[:8], 16)  # Use part of GUID as entity ID
         self.x = 0.0
         self.y = 64.0  # Spawn height
         self.z = 0.0

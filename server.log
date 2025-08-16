@@ -57,3 +57,84 @@
 2025-08-16 18:15:00,921 - world - INFO - World saved to world.json
 2025-08-16 18:15:00,958 - world - INFO - World saved to world.json
 2025-08-16 18:15:00,972 - world - INFO - World saved to world.json
+2025-08-16 18:16:20,500 - server - INFO - Shutting down server...
+2025-08-16 18:16:20,500 - world - INFO - World saved to world.json
+2025-08-16 18:16:20,501 - network.raknet - INFO - RakNet server stopped
+2025-08-16 18:16:20,501 - server - INFO - Server shutdown complete
+2025-08-16 18:16:20,501 - __main__ - INFO - Server shutdown requested
+2025-08-16 18:20:00,046 - world - INFO - World saved to world.json
+2025-08-16 18:20:00,096 - world - INFO - World saved to world.json
+2025-08-16 18:20:00,147 - world - INFO - World saved to world.json
+2025-08-16 18:20:00,197 - world - INFO - World saved to world.json
+2025-08-16 18:20:00,248 - world - INFO - World saved to world.json
+2025-08-16 18:20:00,298 - world - INFO - World saved to world.json
+2025-08-16 18:20:00,348 - world - INFO - World saved to world.json
+2025-08-16 18:20:00,399 - world - INFO - World saved to world.json
+2025-08-16 18:20:00,449 - world - INFO - World saved to world.json
+2025-08-16 18:20:00,499 - world - INFO - World saved to world.json
+2025-08-16 18:20:00,550 - world - INFO - World saved to world.json
+2025-08-16 18:20:00,600 - world - INFO - World saved to world.json
+2025-08-16 18:20:00,650 - world - INFO - World saved to world.json
+2025-08-16 18:20:00,701 - world - INFO - World saved to world.json
+2025-08-16 18:20:00,751 - world - INFO - World saved to world.json
+2025-08-16 18:20:00,802 - world - INFO - World saved to world.json
+2025-08-16 18:20:00,852 - world - INFO - World saved to world.json
+2025-08-16 18:20:00,902 - world - INFO - World saved to world.json
+2025-08-16 18:20:00,953 - world - INFO - World saved to world.json
+2025-08-16 18:21:44,335 - network.raknet - INFO - RakNet server initialized on 0.0.0.0:19132
+2025-08-16 18:21:44,335 - world - INFO - Created world with seed: 625410
+2025-08-16 18:21:44,335 - __main__ - INFO - Starting Minecraft Bedrock Server...
+2025-08-16 18:21:44,335 - __main__ - INFO - Server will be available at 0.0.0.0:19132
+2025-08-16 18:21:44,335 - __main__ - INFO - Type 'stop' in console to shutdown the server
+2025-08-16 18:21:44,335 - world - INFO - World loaded from world.json
+2025-08-16 18:21:44,335 - world - INFO - Loaded 0 chunks
+2025-08-16 18:21:44,335 - network.raknet - INFO - RakNet server started on 0.0.0.0:19132
+2025-08-16 18:21:44,335 - server - INFO - Server started on 0.0.0.0:19132
+2025-08-16 18:21:44,336 - server - INFO - Max players: 20
+2025-08-16 18:21:44,336 - server - INFO - MOTD: Python Bedrock Server
+2025-08-16 18:22:39,160 - network.raknet - INFO - RakNet server initialized on 0.0.0.0:19132
+2025-08-16 18:22:39,160 - world - INFO - Created world with seed: 857032
+2025-08-16 18:22:39,160 - __main__ - INFO - Starting Minecraft Bedrock Server...
+2025-08-16 18:22:39,160 - __main__ - INFO - Server will be available at 0.0.0.0:19132
+2025-08-16 18:22:39,160 - __main__ - INFO - Type 'stop' in console to shutdown the server
+2025-08-16 18:22:39,160 - world - INFO - World loaded from world.json
+2025-08-16 18:22:39,160 - world - INFO - Loaded 0 chunks
+2025-08-16 18:22:39,160 - network.raknet - INFO - RakNet server started on 0.0.0.0:19132
+2025-08-16 18:22:39,161 - server - INFO - Server started on 0.0.0.0:19132
+2025-08-16 18:22:39,161 - server - INFO - Max players: 20
+2025-08-16 18:22:39,161 - server - INFO - MOTD: Python Bedrock Server
+2025-08-16 18:22:40,501 - network.raknet - INFO - Handled open connection request 2 from ('127.0.0.1', 41435)
+2025-08-16 18:24:39,993 - network.raknet - INFO - RakNet server initialized on 0.0.0.0:19132
+2025-08-16 18:24:39,994 - world - INFO - Created world with seed: 309129
+2025-08-16 18:24:39,995 - __main__ - INFO - Starting Minecraft Bedrock Server...
+2025-08-16 18:24:39,996 - __main__ - INFO - Server will be available at 0.0.0.0:19132
+2025-08-16 18:24:39,996 - __main__ - INFO - Type 'stop' in console to shutdown the server
+2025-08-16 18:24:39,996 - world - INFO - World loaded from world.json
+2025-08-16 18:24:39,996 - world - INFO - Loaded 0 chunks
+2025-08-16 18:24:39,996 - network.raknet - INFO - RakNet server started on 0.0.0.0:19132
+2025-08-16 18:24:39,996 - server - INFO - Server started on 0.0.0.0:19132
+2025-08-16 18:24:39,996 - server - INFO - Max players: 20
+2025-08-16 18:24:39,996 - server - INFO - MOTD: Python Bedrock Server
+2025-08-16 18:24:42,468 - network.raknet - INFO - Sent packet to ('127.0.0.1', 51960): 108 bytes
+2025-08-16 18:24:42,468 - network.raknet - INFO - Sent packet to ('127.0.0.1', 51960): 27 bytes
+2025-08-16 18:24:42,468 - network.raknet - INFO - Handled open connection request 2 from ('127.0.0.1', 51960)
+2025-08-16 18:25:00,011 - world - INFO - World saved to world.json
+2025-08-16 18:25:00,062 - world - INFO - World saved to world.json
+2025-08-16 18:25:00,112 - world - INFO - World saved to world.json
+2025-08-16 18:25:00,162 - world - INFO - World saved to world.json
+2025-08-16 18:25:00,213 - world - INFO - World saved to world.json
+2025-08-16 18:25:00,263 - world - INFO - World saved to world.json
+2025-08-16 18:25:00,313 - world - INFO - World saved to world.json
+2025-08-16 18:25:00,364 - world - INFO - World saved to world.json
+2025-08-16 18:25:00,414 - world - INFO - World saved to world.json
+2025-08-16 18:25:00,464 - world - INFO - World saved to world.json
+2025-08-16 18:25:00,515 - world - INFO - World saved to world.json
+2025-08-16 18:25:00,565 - world - INFO - World saved to world.json
+2025-08-16 18:25:00,615 - world - INFO - World saved to world.json
+2025-08-16 18:25:00,666 - world - INFO - World saved to world.json
+2025-08-16 18:25:00,716 - world - INFO - World saved to world.json
+2025-08-16 18:25:00,766 - world - INFO - World saved to world.json
+2025-08-16 18:25:00,817 - world - INFO - World saved to world.json
+2025-08-16 18:25:00,867 - world - INFO - World saved to world.json
+2025-08-16 18:25:00,918 - world - INFO - World saved to world.json
+2025-08-16 18:25:00,968 - world - INFO - World saved to world.json

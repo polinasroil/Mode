@@ -145,10 +145,12 @@ class World:
     
     def get_chunk_data(self, x: int, z: int) -> Optional[bytes]:
         """Get serialized chunk data for network transmission"""
-        chunk = self.get_chunk(x, z)
-        if chunk:
-            return chunk.serialize()
-        return None
+        try:
+            from protocol.chunk_serializer import ChunkSerializer
+            return ChunkSerializer.create_flat_world_chunk(x, z, 64)
+        except Exception as e:
+            logger.error(f"Error serializing chunk ({x}, {z}): {e}")
+            return None
     
     def get_loaded_chunks(self) -> List[Tuple[int, int]]:
         """Get list of loaded chunk coordinates"""

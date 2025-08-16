@@ -14,6 +14,7 @@ from typing import Dict, List, Optional
 from network.raknet import RakNetServer
 from player import Player
 from world import World
+from packets import PacketHandler, PacketID, PlayStatus, PlayerAction, BlockID
 
 logger = logging.getLogger(__name__)
 
@@ -34,14 +35,9 @@ class MinecraftServer:
         self.players: Dict[str, Player] = {}
         self.running = False
         
-        # Console commands
-        self.commands = {
-            'stop': self.stop_server,
-            'say': self.say_command,
-            'kick': self.kick_command,
-            'list': self.list_command,
-            'help': self.help_command
-        }
+        # Command system
+        from commands import CommandManager
+        self.command_manager = CommandManager()
     
     async def start(self):
         """Start the Minecraft server"""
@@ -126,64 +122,158 @@ class MinecraftServer:
         try:
             packet_id = packet_data[0] if packet_data else 0
             
-            if packet_id == 0x0C:  # MovePlayerPacket
+            if packet_id == PacketID.MOVE_PLAYER_PACKET:
                 await self.handle_move_player(player, packet_data)
-            elif packet_id == 0x1B:  # PlayerActionPacket
+            elif packet_id == PacketID.PLAYER_ACTION_PACKET:
                 await self.handle_player_action(player, packet_data)
-            elif packet_id == 0x1C:  # UpdateBlockPacket
+            elif packet_id == PacketID.UPDATE_BLOCK_PACKET:
                 await self.handle_update_block(player, packet_data)
-            elif packet_id == 0x09:  # TextPacket
+            elif packet_id == PacketID.TEXT_PACKET:
                 await self.handle_text(player, packet_data)
-            elif packet_id == 0x0D:  # PlayerAuthInputPacket
+            elif packet_id == PacketID.PLAYER_AUTH_INPUT_PACKET:
                 await self.handle_player_auth_input(player, packet_data)
+            elif packet_id == PacketID.NETWORK_STACK_LATENCY_PACKET:
+                await self.handle_network_latency(player, packet_data)
+            elif packet_id == PacketID.BATCH_PACKET:
+                await self.handle_batch_packet(player, packet_data)
+            else:
+                logger.debug(f"Unhandled packet ID: {packet_id:02X} from {player.username}")
                 
         except Exception as e:
             logger.error(f"Error handling packet {packet_id:02X} from {player.username}: {e}")
     
     async def handle_move_player(self, player: Player, packet_data: bytes):
         """Handle player movement"""
-        # Parse position from packet (simplified)
-        if len(packet_data) >= 13:
-            x = int.from_bytes(packet_data[1:5], 'little', signed=True) / 32
-            y = int.from_bytes(packet_data[5:9], 'little', signed=True) / 32
-            z = int.from_bytes(packet_data[9:13], 'little', signed=True) / 32
-            
-            player.x, player.y, player.z = x, y, z
-            
-            # Broadcast movement to other players
-            await self.broadcast_move_player(player)
+        try:
+            parsed = PacketHandler.parse_move_player_packet(packet_data)
+            if parsed:
+                player.x = parsed['x']
+                player.y = parsed['y']
+                player.z = parsed['z']
+                player.yaw = parsed['yaw']
+                player.pitch = parsed['pitch']
+                player.on_ground = parsed['on_ground']
+                
+                # Broadcast movement to other players
+                await self.broadcast_move_player(player)
+        except Exception as e:
+            logger.error(f"Error handling move player: {e}")
     
     async def handle_player_action(self, player: Player, packet_data: bytes):
         """Handle player actions (break/place blocks)"""
-        # Simplified block action handling
-        pass
+        try:
+            parsed = PacketHandler.parse_player_action_packet(packet_data)
+            if parsed:
+                action = parsed['action']
+                x, y, z = parsed['x'], parsed['y'], parsed['z']
+                face = parsed['face']
+                
+                if action == PlayerAction.START_BREAK:
+                    # Player started breaking a block
+                    block_id = self.world.get_block(x, y, z)
+                    if block_id != BlockID.AIR:
+                        # Remove block
+                        self.world.set_block(x, y, z, BlockID.AIR)
+                        # Broadcast block update
+                        await self.broadcast_block_update(x, y, z, BlockID.AIR)
+                        logger.info(f"Player {player.username} broke block at ({x}, {y}, {z})")
+                
+                elif action == PlayerAction.STOP_BREAK:
+                    # Player stopped breaking a block
+                    pass
+                    
+        except Exception as e:
+            logger.error(f"Error handling player action: {e}")
     
     async def handle_update_block(self, player: Player, packet_data: bytes):
         """Handle block updates"""
-        # Simplified block update handling
-        pass
+        try:
+            parsed = PacketHandler.parse_update_block_packet(packet_data)
+            if parsed:
+                x, y, z = parsed['x'], parsed['y'], parsed['z']
+                block_id = parsed['block_id']
+                flags = parsed['flags']
+                
+                # Update block in world
+                self.world.set_block(x, y, z, block_id)
+                
+                # Broadcast to other players
+                await self.broadcast_block_update(x, y, z, block_id)
+                
+                logger.info(f"Player {player.username} placed block {block_id} at ({x}, {y}, {z})")
+                
+        except Exception as e:
+            logger.error(f"Error handling update block: {e}")
     
     async def handle_text(self, player: Player, packet_data: bytes):
         """Handle chat messages"""
-        # Parse chat message (simplified)
-        if len(packet_data) > 1:
-            message = packet_data[1:].decode('utf-8', errors='ignore')
-            await self.broadcast_message(f"<{player.username}> {message}")
+        try:
+            parsed = PacketHandler.parse_text_packet(packet_data)
+            if parsed and parsed['message']:
+                message = parsed['message']
+                await self.broadcast_message(f"<{player.username}> {message}")
+                logger.info(f"Chat: {player.username}: {message}")
+        except Exception as e:
+            logger.error(f"Error handling text packet: {e}")
     
     async def handle_player_auth_input(self, player: Player, packet_data: bytes):
         """Handle player input (movement, actions)"""
         # Simplified input handling
         pass
     
+    async def handle_network_latency(self, player: Player, packet_data: bytes):
+        """Handle network latency packet"""
+        try:
+            # Parse timestamp and send back
+            if len(packet_data) >= 9:
+                timestamp = int.from_bytes(packet_data[1:9], 'little')
+                # Send back the same timestamp
+                response = PacketHandler.create_network_stack_latency_packet(timestamp)
+                await player.connection.send_packet(response)
+        except Exception as e:
+            logger.error(f"Error handling network latency: {e}")
+    
+    async def handle_batch_packet(self, player: Player, packet_data: bytes):
+        """Handle batch packet (multiple packets compressed)"""
+        try:
+            from protocol.serializer import BatchPacket
+            packets = BatchPacket.decompress_packets(packet_data)
+            for packet in packets:
+                await self.handle_packet(player, packet)
+        except Exception as e:
+            logger.error(f"Error handling batch packet: {e}")
+    
     async def send_login_success(self, player: Player):
         """Send login success packet to player"""
-        packet = b'\x02' + player.guid.encode() + b'\x00'  # Simplified
+        packet = PacketHandler.create_play_status_packet(PlayStatus.LOGIN_SUCCESS)
         await player.connection.send_packet(packet)
     
     async def send_start_game(self, player: Player):
         """Send start game packet to player"""
-        # Simplified StartGamePacket
-        packet = b'\x0B' + b'\x00' * 100  # Placeholder
+        world_data = {
+            'entity_id': player.entity_id,
+            'runtime_entity_id': player.entity_id,
+            'game_type': self.game_mode,
+            'x': player.x,
+            'y': player.y,
+            'z': player.z,
+            'yaw': player.yaw,
+            'pitch': player.pitch,
+            'seed': self.world.seed,
+            'biome_type': 1,  # Plains
+            'world_name': self.world.world_name,
+            'game_version': '1.20.15',
+            'player_permissions': 0,
+            'world_game_mode': self.game_mode,
+            'difficulty': self.difficulty,
+            'spawn_x': self.world.spawn_x,
+            'spawn_y': self.world.spawn_y,
+            'spawn_z': self.world.spawn_z,
+            'time': self.world.time,
+            'player_game_mode': self.game_mode
+        }
+        
+        packet = PacketHandler.create_start_game_packet(world_data)
         await player.connection.send_packet(packet)
     
     async def send_spawn_chunks(self, player: Player):
@@ -191,9 +281,9 @@ class MinecraftServer:
         # Send a few chunks around spawn
         for x in range(-1, 2):
             for z in range(-1, 2):
-                chunk_data = await self.world.get_chunk(x, z)
+                chunk_data = await self.world.get_chunk_data(x, z)
                 if chunk_data:
-                    packet = b'\x3A' + chunk_data  # LevelChunkPacket
+                    packet = PacketHandler.create_level_chunk_packet(x, z, chunk_data)
                     await player.connection.send_packet(packet)
     
     async def broadcast_move_player(self, player: Player):
@@ -201,12 +291,23 @@ class MinecraftServer:
         for other_player in self.players.values():
             if other_player.guid != player.guid:
                 # Send MovePlayerPacket to other players
-                packet = b'\x0C' + player.guid.encode() + b'\x00' * 12
+                packet = PacketHandler.create_move_player_packet(
+                    player.entity_id,
+                    player.x, player.y, player.z,
+                    player.yaw, player.pitch, player.yaw,
+                    0, player.on_ground, 0
+                )
                 await other_player.connection.send_packet(packet)
+    
+    async def broadcast_block_update(self, x: int, y: int, z: int, block_id: int):
+        """Broadcast block update to all players"""
+        packet = PacketHandler.create_update_block_packet(x, y, z, block_id, 0)
+        for player in self.players.values():
+            await player.connection.send_packet(packet)
     
     async def broadcast_message(self, message: str):
         """Broadcast message to all players"""
-        packet = b'\x09' + message.encode('utf-8')
+        packet = PacketHandler.create_text_packet(message, 1)
         for player in self.players.values():
             await player.connection.send_packet(packet)
     
@@ -231,64 +332,16 @@ class MinecraftServer:
     
     def execute_command(self, command: str):
         """Execute a console command"""
-        parts = command.split()
-        if not parts:
-            return
+        # Create a dummy player for console commands
+        class ConsolePlayer:
+            def __init__(self):
+                self.username = "Console"
+                self.is_op = lambda: True
         
-        cmd = parts[0].lower()
-        args = parts[1:]
-        
-        if cmd in self.commands:
-            try:
-                self.commands[cmd](args)
-            except Exception as e:
-                logger.error(f"Command error: {e}")
-        else:
-            logger.info(f"Unknown command: {cmd}. Type 'help' for available commands.")
+        console_player = ConsolePlayer()
+        asyncio.create_task(self.command_manager.execute_command(self, console_player, command))
     
-    def stop_server(self, args):
-        """Stop the server"""
-        logger.info("Stopping server...")
-        self.running = False
-    
-    def say_command(self, args):
-        """Say command - broadcast message"""
-        if args:
-            message = " ".join(args)
-            asyncio.create_task(self.broadcast_message(f"[Server] {message}"))
-            logger.info(f"Server: {message}")
-        else:
-            logger.info("Usage: say <message>")
-    
-    def kick_command(self, args):
-        """Kick a player"""
-        if args:
-            username = args[0]
-            for player in self.players.values():
-                if player.username.lower() == username.lower():
-                    asyncio.create_task(self.remove_player(player))
-                    logger.info(f"Kicked player: {username}")
-                    return
-            logger.info(f"Player not found: {username}")
-        else:
-            logger.info("Usage: kick <username>")
-    
-    def list_command(self, args):
-        """List online players"""
-        if self.players:
-            player_list = ", ".join([p.username for p in self.players.values()])
-            logger.info(f"Online players ({len(self.players)}): {player_list}")
-        else:
-            logger.info("No players online")
-    
-    def help_command(self, args):
-        """Show help"""
-        logger.info("Available commands:")
-        logger.info("  stop - Stop the server")
-        logger.info("  say <message> - Broadcast message")
-        logger.info("  kick <username> - Kick a player")
-        logger.info("  list - List online players")
-        logger.info("  help - Show this help")
+
     
     async def shutdown(self):
         """Shutdown the server"""
