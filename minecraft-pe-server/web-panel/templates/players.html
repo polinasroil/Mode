@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+
+{% block title %}Управление игроками - Minecraft PE Server{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-users me-2"></i>Управление игроками</h1>
+    <div class="btn-group" role="group">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addPlayerModal">
+            <i class="fas fa-user-plus me-1"></i>Добавить игрока
+        </button>
+        <button type="button" class="btn btn-warning" id="refreshPlayers">
+            <i class="fas fa-sync-alt me-1"></i>Обновить
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Статистика игроков -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-dark border-primary text-center">
+            <div class="card-body">
+                <h3 class="text-primary">{{ players|length }}</h3>
+                <small class="text-muted">Всего игроков</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-dark border-success text-center">
+            <div class="card-body">
+                <h3 class="text-success">{{ players|selectattr('online', 'equalto', true)|list|length }}</h3>
+                <small class="text-muted">Онлайн</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-dark border-warning text-center">
+            <div class="card-body">
+                <h3 class="text-warning">{{ players|selectattr('banned', 'equalto', true)|list|length }}</h3>
+                <small class="text-muted">Забанено</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-dark border-info text-center">
+            <div class="card-body">
+                <h3 class="text-info">{{ players|selectattr('whitelisted', 'equalto', true)|list|length }}</h3>
+                <small class="text-muted">В белом списке</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Таблица игроков -->
+<div class="card bg-dark border-primary">
+    <div class="card-header bg-primary text-white">
+        <h5><i class="fas fa-list me-2"></i>Список игроков</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover table-sortable">
+                <thead>
+                    <tr>
+                        <th data-sort="username">
+                            <i class="fas fa-user me-1"></i>Игрок
+                            <i class="fas fa-sort ms-1"></i>
+                        </th>
+                        <th data-sort="ip_address">
+                            <i class="fas fa-network-wired me-1"></i>IP адрес
+                            <i class="fas fa-sort ms-1"></i>
+                        </th>
+                        <th data-sort="join_time">
+                            <i class="fas fa-clock me-1"></i>Время подключения
+                            <i class="fas fa-sort ms-1"></i>
+                        </th>
+                        <th data-sort="last_seen">
+                            <i class="fas fa-eye me-1"></i>Последняя активность
+                            <i class="fas fa-sort ms-1"></i>
+                        </th>
+                        <th data-sort="gamemode">
+                            <i class="fas fa-gamepad me-1"></i>Режим игры
+                            <i class="fas fa-sort ms-1"></i>
+                        </th>
+                        <th data-sort="health">
+                            <i class="fas fa-heart me-1"></i>Здоровье
+                            <i class="fas fa-sort ms-1"></i>
+                        </th>
+                        <th data-sort="level">
+                            <i class="fas fa-star me-1"></i>Уровень
+                            <i class="fas fa-sort ms-1"></i>
+                        </th>
+                        <th>
+                            <i class="fas fa-cogs me-1"></i>Действия
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for player in players %}
+                    <tr data-username="{{ player.username }}">
+                        <td data-username="{{ player.username }}">
+                            <div class="d-flex align-items-center">
+                                <span class="status-indicator status-{{ 'online' if player.online else 'offline' }}"></span>
+                                <strong>{{ player.username }}</strong>
+                                {% if player.whitelisted %}
+                                    <span class="badge bg-success ms-2">WL</span>
+                                {% endif %}
+                                {% if player.banned %}
+                                    <span class="badge bg-danger ms-2">BAN</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td data-ip_address="{{ player.ip_address }}">
+                            <code>{{ player.ip_address }}</code>
+                        </td>
+                        <td data-join_time="{{ player.join_time }}">
+                            {{ player.join_time }}
+                        </td>
+                        <td data-last_seen="{{ player.last_seen }}">
+                            {{ player.last_seen }}
+                        </td>
+                        <td data-gamemode="{{ player.gamemode }}">
+                            <span class="badge bg-{{ 'success' if player.gamemode == 'survival' else 'warning' }}">
+                                {{ player.gamemode|title }}
+                            </span>
+                        </td>
+                        <td data-health="{{ player.health }}">
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-{{ 'success' if player.health > 10 else 'danger' }}" 
+                                     style="width: {{ (player.health / 20) * 100 }}%">
+                                    {{ "%.1f"|format(player.health) }}
+                                </div>
+                            </div>
+                        </td>
+                        <td data-level="{{ player.level }}">
+                            <span class="badge bg-info">{{ player.level }}</span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-info" 
+                                        data-bs-toggle="tooltip" title="Информация"
+                                        onclick="showPlayerInfo('{{ player.username }}')">
+                                    <i class="fas fa-info-circle"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-warning" 
+                                        data-bs-toggle="tooltip" title="Кик"
+                                        onclick="kickPlayer('{{ player.username }}')">
+                                    <i class="fas fa-boot"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" 
+                                        data-bs-toggle="tooltip" title="Бан"
+                                        onclick="banPlayer('{{ player.username }}')">
+                                    <i class="fas fa-ban"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary dropdown-toggle" 
+                                        data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-dark">
+                                    <li><a class="dropdown-item" href="#" onclick="teleportPlayer('{{ player.username }}')">
+                                        <i class="fas fa-location-arrow me-2"></i>Телепортация
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="giveItem('{{ player.username }}')">
+                                        <i class="fas fa-gift me-2"></i>Выдать предмет
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="setGamemode('{{ player.username }}')">
+                                        <i class="fas fa-gamepad me-2"></i>Изменить режим
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" onclick="resetPlayer('{{ player.username }}')">
+                                        <i class="fas fa-undo me-2"></i>Сброс
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно добавления игрока -->
+<div class="modal fade" id="addPlayerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus me-2"></i>Добавить игрока
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addPlayerForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="playerUsername" class="form-label">Имя игрока</label>
+                        <input type="text" class="form-control" id="playerUsername" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="playerIP" class="form-label">IP адрес</label>
+                        <input type="text" class="form-control" id="playerIP" name="ip_address" 
+                               placeholder="192.168.1.100">
+                    </div>
+                    <div class="mb-3">
+                        <label for="playerGamemode" class="form-label">Режим игры</label>
+                        <select class="form-select" id="playerGamemode" name="gamemode">
+                            <option value="survival">Survival</option>
+                            <option value="creative">Creative</option>
+                            <option value="adventure">Adventure</option>
+                            <option value="spectator">Spectator</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="playerWhitelisted" name="whitelisted">
+                            <label class="form-check-label" for="playerWhitelisted">
+                                Добавить в белый список
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно информации об игроке -->
+<div class="modal fade" id="playerInfoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user me-2"></i>Информация об игроке
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="playerInfoContent">
+                <!-- Содержимое будет загружено динамически -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Обновление списка игроков
+document.getElementById('refreshPlayers').addEventListener('click', function() {
+    location.reload();
+});
+
+// Обработчик формы добавления игрока
+document.getElementById('addPlayerForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData.entries());
+    
+    try {
+        const response = await fetch('/api/players', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Игрок добавлен успешно', 'success');
+            location.reload();
+        } else {
+            showNotification('Ошибка добавления игрока: ' + result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Ошибка:', error);
+        showNotification('Ошибка добавления игрока', 'error');
+    }
+});
+
+// Функции управления игроками
+function showPlayerInfo(username) {
+    // Загрузка информации об игроке
+    fetch(`/api/players/${username}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const player = data.player;
+                document.getElementById('playerInfoContent').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Основная информация</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Имя:</strong> ${player.username}</li>
+                                <li><strong>UUID:</strong> ${player.uuid}</li>
+                                <li><strong>IP адрес:</strong> ${player.ip_address}</li>
+                                <li><strong>Режим игры:</strong> ${player.gamemode}</li>
+                                <li><strong>Уровень:</strong> ${player.level}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Статистика</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Здоровье:</strong> ${player.health}/20</li>
+                                <li><strong>Голод:</strong> ${player.hunger}/20</li>
+                                <li><strong>Опыт:</strong> ${player.experience}</li>
+                                <li><strong>Время подключения:</strong> ${player.join_time}</li>
+                                <li><strong>Последняя активность:</strong> ${player.last_seen}</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6>Права доступа</h6>
+                            <div class="d-flex gap-2">
+                                ${player.permissions.map(perm => 
+                                    `<span class="badge bg-primary">${perm}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                const modal = new bootstrap.Modal(document.getElementById('playerInfoModal'));
+                modal.show();
+            }
+        });
+}
+
+function kickPlayer(username) {
+    if (confirm(`Кикнуть игрока ${username}?`)) {
+        fetch(`/api/players/${username}/kick`, {method: 'POST'})
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(`Игрок ${username} кикнут`, 'success');
+                    location.reload();
+                } else {
+                    showNotification('Ошибка кика: ' + data.message, 'error');
+                }
+            });
+    }
+}
+
+function banPlayer(username) {
+    const reason = prompt(`Причина бана для игрока ${username}:`, 'Нарушение правил');
+    if (reason !== null) {
+        fetch(`/api/players/${username}/ban`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({reason: reason})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(`Игрок ${username} забанен`, 'success');
+                location.reload();
+            } else {
+                showNotification('Ошибка бана: ' + data.message, 'error');
+            }
+        });
+    }
+}
+
+function teleportPlayer(username) {
+    const coords = prompt(`Координаты для телепортации игрока ${username} (x y z):`, '0 64 0');
+    if (coords) {
+        // Здесь будет логика телепортации
+        showNotification(`Телепортация игрока ${username} на координаты ${coords}`, 'info');
+    }
+}
+
+function giveItem(username) {
+    const item = prompt(`Предмет для игрока ${username}:`, 'diamond_sword');
+    const amount = prompt('Количество:', '1');
+    if (item && amount) {
+        // Здесь будет логика выдачи предмета
+        showNotification(`Выдан предмет ${item} x${amount} игроку ${username}`, 'success');
+    }
+}
+
+function setGamemode(username) {
+    const gamemode = prompt(`Новый режим игры для ${username} (survival/creative/adventure/spectator):`, 'survival');
+    if (gamemode) {
+        // Здесь будет логика изменения режима игры
+        showNotification(`Режим игры игрока ${username} изменен на ${gamemode}`, 'success');
+    }
+}
+
+function resetPlayer(username) {
+    if (confirm(`Сбросить данные игрока ${username}? Это действие нельзя отменить!`)) {
+        // Здесь будет логика сброса данных игрока
+        showNotification(`Данные игрока ${username} сброшены`, 'warning');
+    }
+}
+
+// Автообновление каждые 30 секунд
+setInterval(function() {
+    // Обновление только активных данных (статус, здоровье и т.д.)
+    fetch('/api/players')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Обновление данных в таблице
+                data.players.forEach(player => {
+                    const row = document.querySelector(`tr[data-username="${player.username}"]`);
+                    if (row) {
+                        // Обновление статуса
+                        const statusIndicator = row.querySelector('.status-indicator');
+                        if (statusIndicator) {
+                            statusIndicator.className = `status-indicator status-${player.online ? 'online' : 'offline'}`;
+                        }
+                        
+                        // Обновление здоровья
+                        const healthCell = row.querySelector('[data-health]');
+                        if (healthCell) {
+                            const progressBar = healthCell.querySelector('.progress-bar');
+                            if (progressBar) {
+                                progressBar.style.width = `${(player.health / 20) * 100}%`;
+                                progressBar.textContent = player.health.toFixed(1);
+                                progressBar.className = `progress-bar bg-${player.health > 10 ? 'success' : 'danger'}`;
+                            }
+                        }
+                    }
+                });
+            }
+        });
+}, 30000);
+</script>
+{% endblock %}
