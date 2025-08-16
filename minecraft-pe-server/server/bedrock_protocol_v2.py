@@ -689,3 +689,69 @@ class BedrockProtocolV2:
         except Exception as e:
             logger.error(f"Ошибка создания данных команд v2.0: {e}")
             return struct.pack('>I', 0)
+    
+    async def process_sessions(self):
+        """Обработка сессий Bedrock"""
+        try:
+            current_time = time.time()
+            sessions_to_remove = []
+            
+            for addr, session in list(self.sessions.items()):
+                # Проверка таймаута (30 секунд без активности)
+                if current_time - session.last_pong > 30:
+                    logger.info(f"Таймаут Bedrock сессии {addr}")
+                    sessions_to_remove.append(addr)
+            
+            # Удаление отключенных сессий
+            for addr in sessions_to_remove:
+                session = self.sessions[addr]
+                await self.disconnect_session(session)
+                
+        except Exception as e:
+            logger.error(f"Ошибка обработки сессий Bedrock: {e}")
+    
+    async def broadcast_world_updates(self):
+        """Отправка обновлений мира всем игрокам"""
+        try:
+            # Обновление времени мира
+            self.world_time = (self.world_time + 1) % 24000
+            
+            # Отправка обновлений всем подключенным игрокам
+            for session in self.sessions.values():
+                if session.connected:
+                    try:
+                        # Отправка времени
+                        await self.send_packet(ID_SET_TIME, struct.pack('>I', self.world_time), session.address)
+                        
+                        # Отправка погоды (если изменилась)
+                        if random.random() < 0.001:  # 0.1% шанс изменения погоды
+                            self.weather = random.choice([0, 1, 2])  # 0=Clear, 1=Rain, 2=Thunder
+                            await self.send_packet(ID_SET_WEATHER, struct.pack('>B', self.weather), session.address)
+                            
+                    except Exception as e:
+                        logger.error(f"Ошибка отправки обновлений игроку {session.username}: {e}")
+                        
+        except Exception as e:
+            logger.error(f"Ошибка broadcast_world_updates: {e}")
+    
+    async def handle_raknet_connection(self, raknet_session):
+        """Обработка соединения через RakNet"""
+        try:
+            logger.info(f"RakNet соединение установлено для {raknet_session.address}")
+            
+            # Здесь можно добавить логику инициализации Bedrock сессии
+            # после установки RakNet соединения
+            
+        except Exception as e:
+            logger.error(f"Ошибка обработки RakNet соединения: {e}")
+    
+    async def handle_raknet_data(self, data: bytes, raknet_session):
+        """Обработка данных от RakNet"""
+        try:
+            # Передача данных в Bedrock протокол
+            if len(data) > 0:
+                packet_id = data[0]
+                await self.handle_packet(data, raknet_session.address)
+                
+        except Exception as e:
+            logger.error(f"Ошибка обработки RakNet данных: {e}")

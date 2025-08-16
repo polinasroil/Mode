@@ -17917,3 +17917,41 @@
 2025-08-16 16:28:07,094 - server.raknet_protocol - INFO - RakNet протокол остановлен
 2025-08-16 16:28:07,094 - server.bedrock_protocol_v2 - INFO - Bedrock протокол v2.0 остановлен
 2025-08-16 16:28:07,094 - server.main_fixed - INFO - 🛑 Minecraft PE Server остановлен
+2025-08-16 16:44:07,500 - __main__ - INFO - 🐍 Python 3.13.3 (main, Apr  8 2025, 19:55:40) [GCC 14.2.0]
+2025-08-16 16:44:07,500 - __main__ - INFO - 📂 Рабочая директория: /workspace/minecraft-pe-server
+2025-08-16 16:44:07,500 - __main__ - INFO - 🚀 Запуск Minecraft PE Server v2.0.1...
+2025-08-16 16:44:07,500 - __main__ - INFO - 🔍 Проверка зависимостей...
+2025-08-16 16:44:07,509 - __main__ - INFO - ✅ server.raknet_protocol
+2025-08-16 16:44:07,509 - __main__ - INFO - ✅ server.bedrock_protocol_v2
+2025-08-16 16:44:07,509 - __main__ - INFO - ✅ server.compression
+2025-08-16 16:44:07,509 - __main__ - INFO - ✅ server.chunk_system
+2025-08-16 16:44:07,509 - __main__ - INFO - ✅ Все зависимости установлены
+2025-08-16 16:44:07,509 - __main__ - INFO - 📁 Создание директорий...
+2025-08-16 16:44:07,509 - __main__ - INFO - ✅ Создана директория: config
+2025-08-16 16:44:07,509 - __main__ - INFO - ✅ Создана директория: worlds
+2025-08-16 16:44:07,509 - __main__ - INFO - ✅ Создана директория: logs
+2025-08-16 16:44:07,509 - __main__ - INFO - ✅ Создана директория: backups
+2025-08-16 16:44:07,509 - __main__ - INFO - ✅ Создана директория: plugins
+2025-08-16 16:44:07,509 - server.main_fixed - INFO - Minecraft PE Server инициализируется...
+2025-08-16 16:44:07,509 - __main__ - INFO - ✅ Сервер инициализирован, запуск...
+2025-08-16 16:44:07,509 - server.main_fixed - INFO - ✅ Конфигурация загружена успешно
+2025-08-16 16:44:07,510 - server.compression - INFO - Система сжатия инициализирована: ZLIB (уровень: 6)
+2025-08-16 16:44:07,510 - server.compression - INFO - Адаптивное сжатие инициализировано
+2025-08-16 16:44:07,510 - server.main_fixed - INFO - ✅ Система сжатия инициализирована
+2025-08-16 16:44:07,510 - server.chunk_system - INFO - Менеджер чанков инициализирован (seed: 0)
+2025-08-16 16:44:07,510 - server.main_fixed - INFO - ✅ Менеджер чанков инициализирован
+2025-08-16 16:44:07,613 - server.main_fixed - INFO - ✅ Мир 'world' инициализирован
+2025-08-16 16:44:07,614 - server.main_fixed - INFO - ✅ Мир создан
+2025-08-16 16:44:07,614 - server.raknet_protocol - INFO - RakNet протокол инициализирован (GUID: 4941329274942692389)
+2025-08-16 16:44:07,614 - server.raknet_protocol - INFO - Запуск RakNet протокола на 0.0.0.0:19132
+2025-08-16 16:44:07,614 - server.raknet_protocol - INFO - RakNet сокет создан и привязан к 0.0.0.0:19132
+2025-08-16 16:44:07,614 - server.main_fixed - INFO - ✅ RakNet протокол запущен
+2025-08-16 16:44:07,614 - server.bedrock_protocol_v2 - INFO - Bedrock протокол v2.0 инициализирован (GUID: 1990422168871326479)
+2025-08-16 16:44:07,614 - server.bedrock_protocol_v2 - INFO - Запуск Bedrock протокола v2.0 на 0.0.0.0:19132
+2025-08-16 16:44:07,614 - server.bedrock_protocol_v2 - INFO - Bedrock сокет создан и привязан к 0.0.0.0:19132
+2025-08-16 16:44:07,614 - server.main_fixed - INFO - ✅ Bedrock протокол запущен
+2025-08-16 16:44:07,614 - server.main_fixed - INFO - ✅ Minecraft PE Server успешно запущен!
+2025-08-16 16:44:07,614 - server.main_fixed - INFO - 🔄 Основной цикл сервера запущен
+2025-08-16 16:44:07,614 - server.raknet_protocol - INFO - Запуск цикла обработки пакетов RakNet
+2025-08-16 16:44:07,614 - server.bedrock_protocol_v2 - INFO - Запуск цикла обработки пакетов Bedrock v2.0
+2025-08-16 16:44:07,614 - server.bedrock_protocol_v2 - INFO - Запуск цикла обновления мира
