@@ -1,0 +1,28 @@
+{
+  "format_version": "1.1.0",
+  "minecraft:trade_table": {
+    "description": {
+      "identifier": "drill_rig:trading"
+    },
+    "tiers": [
+      {
+        "trades": [
+          {
+            "wants": [
+              {
+                "item": "minecraft:emerald",
+                "quantity": 5
+              }
+            ],
+            "gives": [
+              {
+                "item": "drill_rig:drill_rig",
+                "quantity": 1
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

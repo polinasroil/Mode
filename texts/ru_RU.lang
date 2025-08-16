@@ -1,0 +1,3 @@
+tile.drill_rig.name=Буровая установка
+item.drill_rig.name=Буровая установка
+tile.drill_rig.desc=Автоматически добывает ресурсы
