@@ -2,8 +2,8 @@
   "resource_pack_name": "drill_rig",
   "texture_name": "atlas.items",
   "texture_data": {
-    "drill_rig": {
-      "textures": "textures/items/drill_rig"
+    "iron_block": {
+      "textures": "textures/blocks/iron_block"
     }
   }
 }

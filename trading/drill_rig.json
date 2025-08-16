@@ -16,7 +16,7 @@
             ],
             "gives": [
               {
-                "item": "drill_rig:drill_rig",
+                "item": "minecraft:iron_block",
                 "quantity": 1
               }
             ]

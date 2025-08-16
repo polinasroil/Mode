@@ -1,4 +1,4 @@
-import { world, BlockLocation, Direction } from "@minecraft/server";
+import { world, BlockLocation } from "@minecraft/server";
 
 // Регистрация блока буровой установки
 world.events.beforeItemUseOn.subscribe((eventData) => {
@@ -12,10 +12,6 @@ world.events.beforeItemUseOn.subscribe((eventData) => {
     
     // Устанавливаем блок буровой установки
     dimension.getBlock(blockLocation).setType("minecraft:iron_block");
-    
-    // Добавляем специальные свойства
-    const block = dimension.getBlock(blockLocation);
-    block.setPermutation(block.permutation.withState("drill_rig", true));
     
     player.sendMessage("§aБуровая установка установлена!");
     

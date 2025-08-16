@@ -2,12 +2,12 @@
   "format_version": "1.16.100",
   "minecraft:item": {
     "description": {
-      "identifier": "drill_rig:drill_rig",
+      "identifier": "minecraft:iron_block",
       "category": "items"
     },
     "components": {
       "minecraft:icon": {
-        "texture": "drill_rig"
+        "texture": "iron_block"
       },
       "minecraft:display_name": {
         "value": "item.drill_rig.name"
@@ -15,13 +15,7 @@
       "minecraft:max_stack_size": 64,
       "minecraft:foil": false,
       "minecraft:hand_equipped": false,
-      "minecraft:use_duration": 0,
-      "minecraft:food": {
-        "can_always_eat": false,
-        "nutrition": 0,
-        "saturation_modifier": "poor",
-        "using_converts_to": "minecraft:air"
-      }
+      "minecraft:use_duration": 0
     }
   }
 }

@@ -21,10 +21,5 @@
       "entry": "scripts/main.js"
     }
   ],
-  "dependencies": [
-    {
-      "uuid": "b6a8f7b3-4c6e-4f3d-8c5a-123456789012",
-      "version": [1, 0, 0]
-    }
-  ]
+  "dependencies": []
 }
