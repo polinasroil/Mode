@@ -312,80 +312,72 @@ class BedrockProtocolV2:
             logger.error(f"Ошибка обработки пакета {packet_id:02X} от {addr}: {e}")
     
     async def handle_login(self, data: bytes, addr: Tuple[str, int]):
-        """Обработка входа в Minecraft PE согласно спецификации"""
+        """Обработка входа игрока"""
         try:
-            # Проверяем, не обрабатывается ли уже вход для этого адреса
-            if addr in self.sessions and self.sessions[addr].connected:
-                logger.debug(f"Игрок с {addr} уже подключен, игнорируем повторный login")
+            if len(data) < 20:
+                logger.error(f"Недостаточно данных для входа: {len(data)} байт")
                 return
             
-            # Парсинг данных входа согласно спецификации
-            if len(data) > 1:
-                # Извлечение базовой информации
-                username = data[1:].decode('utf-8', errors='ignore').split('\x00')[0]
-                if not username or username == "":
-                    username = f"Player_{random.randint(1000, 9999)}"
-                
-                # Создание сессии с полными данными
-                session = BedrockSession(addr, random.randint(0, 0xFFFFFFFFFFFFFFFF))
-                session.username = username
-                session.connected = True
-                session.join_time = time.time()
-                session.last_ping = time.time()
-                session.last_pong = time.time()
-                session.entity_id = self.next_entity_id
-                session.gamemode = 0  # Survival
-                
-                # Установка способностей по умолчанию
-                session.can_fly = False
-                session.can_build = True
-                session.can_break_blocks = True
-                session.can_instabuild = False
-                session.can_fly_and_instabuild = False
-                session.invulnerable = False
-                session.flying = False
-                session.may_fly = False
-                session.walk_speed = 0.1
-                session.fly_speed = 0.05
-                session.health = 20.0
-                session.max_health = 20.0
-                session.food = 20.0
-                session.max_food = 20.0
-                session.experience = 0.0
-                session.level = 0
-                session.total_experience = 0
-                
-                self.sessions[addr] = session
-                self.next_entity_id += 1
-                
-                logger.info(f"Попытка входа игрока {username} с {addr} (Entity ID: {session.entity_id})")
-                
-                # Подключение игрока к серверу
+            # Парсинг данных входа
+            username_length = struct.unpack('>H', data[1:3])[0]
+            username = data[3:3+username_length].decode('utf-8', errors='ignore')
+            
+            # Создание сессии
+            session = BedrockSession(addr, 0)  # client_guid будет установлен позже
+            session.username = username
+            session.connected = True
+            session.join_time = time.time()
+            session.last_ping = time.time()
+            session.last_pong = time.time()
+            session.entity_id = self.next_entity_id
+            session.gamemode = 0  # Survival
+            session.spawn_x = 0.0
+            session.spawn_y = 64.0
+            session.spawn_z = 0.0
+            
+            # Увеличение ID сущности
+            self.next_entity_id += 1
+            
+            # Сохранение сессии
+            self.sessions[addr] = session
+            
+            logger.info(f"Попытка входа игрока {username} с {addr} (Entity ID: {session.entity_id})")
+            
+            # Получение данных мира от сервера
+            if hasattr(self.server, 'worlds') and self.server.worlds:
+                world = list(self.server.worlds.values())[0]
+                session.spawn_x = world.spawn_x
+                session.spawn_y = world.spawn_y
+                session.spawn_z = world.spawn_z
+                logger.info(f"Координаты спавна: {session.spawn_x}, {session.spawn_y}, {session.spawn_z}")
+            else:
+                logger.warning("Мир не найден, используются координаты по умолчанию")
+            
+            # Получение игрока от сервера
+            if hasattr(self.server, 'player_join'):
                 try:
                     player = await self.server.player_join(username, addr[0])
-                    
-                    # Установка позиции спавна
-                    if hasattr(self.server, 'worlds') and self.server.worlds:
-                        world = list(self.server.worlds.values())[0]
-                        session.spawn_x = world.spawn_x
-                        session.spawn_y = world.spawn_y
-                        session.spawn_z = world.spawn_z
-                    
-                    # Полная последовательность загрузки игрока согласно спецификации
-                    await self.complete_player_login_v2(session, player)
-                    
+                    logger.info(f"Игрок {username} зарегистрирован на сервере")
                 except Exception as e:
-                    logger.error(f"Ошибка подключения игрока {username}: {e}")
-                    await self.send_packet(ID_DISCONNECT, str(e).encode('utf-8'), addr)
-                    # Удаляем неудачную сессию
-                    if addr in self.sessions:
-                        del self.sessions[addr]
-                    
+                    logger.error(f"Ошибка регистрации игрока {username}: {e}")
+                    player = None
+            else:
+                player = None
+                logger.warning("Метод player_join не найден на сервере")
+            
+            # Полная загрузка игрока в мир
+            await self.complete_player_login_v2(session, player)
+            
+            logger.info(f"Игрок {username} успешно подключен к серверу")
+            
         except Exception as e:
-            logger.error(f"Ошибка обработки входа: {e}")
-            # Удаляем неудачную сессию
-            if addr in self.sessions:
-                del self.sessions[addr]
+            logger.error(f"Ошибка подключения игрока {username if 'username' in locals() else 'Unknown'}: {e}")
+            # Попытка отправить сообщение об ошибке
+            try:
+                error_msg = f"Ошибка подключения: {str(e)}"
+                await self.send_packet(ID_DISCONNECT, error_msg.encode('utf-8'), addr)
+            except:
+                pass
     
     async def complete_player_login_v2(self, session: BedrockSession, player):
         """Полная загрузка игрока в мир согласно спецификации v2.0"""
@@ -755,3 +747,34 @@ class BedrockProtocolV2:
                 
         except Exception as e:
             logger.error(f"Ошибка обработки RakNet данных: {e}")
+    
+    async def send_packet(self, packet_id: int, data: bytes, address: Tuple[str, int]):
+        """Отправка пакета Bedrock"""
+        try:
+            if self.socket:
+                # Создание заголовка пакета
+                packet = struct.pack('>B', packet_id)  # Packet ID
+                packet += data  # Данные пакета
+                
+                # Отправка пакета
+                self.socket.sendto(packet, address)
+                logger.debug(f"Отправлен пакет {packet_id:02X} на {address}")
+                
+        except Exception as e:
+            logger.error(f"Ошибка отправки пакета {packet_id:02X}: {e}")
+    
+    async def send_packet_compressed(self, packet_id: int, data: bytes, address: Tuple[str, int]):
+        """Отправка сжатого пакета Bedrock"""
+        try:
+            if hasattr(self, 'compression') and self.compression:
+                # Сжатие данных
+                compressed_data = self.compression.compress_packet_adaptive(data)
+                await self.send_packet(packet_id, compressed_data, address)
+            else:
+                # Отправка без сжатия
+                await self.send_packet(packet_id, data, address)
+                
+        except Exception as e:
+            logger.error(f"Ошибка отправки сжатого пакета {packet_id:02X}: {e}")
+            # Fallback к обычной отправке
+            await self.send_packet(packet_id, data, address)

@@ -53,6 +53,30 @@ class Player:
     def to_dict(self):
         return asdict(self)
 
+@dataclass
+class World:
+    """Мир Minecraft"""
+    name: str
+    seed: int
+    spawn_x: float
+    spawn_y: float
+    spawn_z: float
+    time: int = 0
+    weather: int = 0
+    difficulty: str = "easy"
+    
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'seed': self.seed,
+            'spawn_x': self.spawn_x,
+            'spawn_y': self.spawn_y,
+            'spawn_z': self.spawn_z,
+            'time': self.time,
+            'weather': self.weather,
+            'difficulty': self.difficulty
+        }
+
 class MinecraftPEServer:
     """Основной сервер Minecraft PE"""
     
@@ -61,7 +85,7 @@ class MinecraftPEServer:
         self.config = {}
         self.players: Dict[str, Player] = {}
         self.max_players = 20
-        self.worlds = {}
+        self.worlds: Dict[str, World] = {}  # Изменено на World объекты
         self.running = False
         
         # Инициализация протоколов
@@ -194,16 +218,16 @@ tick-rate=20
             world_seed = int(self.config.get('level-seed', '0'))
             
             # Создание мира с чанками
-            world = {
-                'name': world_name,
-                'seed': world_seed,
-                'spawn_x': 0.0,
-                'spawn_y': 64.0,
-                'spawn_z': 0.0,
-                'time': 0,
-                'weather': 0,
-                'difficulty': self.config.get('difficulty', 'easy')
-            }
+            world = World(
+                name=world_name,
+                seed=world_seed,
+                spawn_x=0.0,
+                spawn_y=64.0,
+                spawn_z=0.0,
+                time=0,
+                weather=0,
+                difficulty=self.config.get('difficulty', 'easy')
+            )
             
             self.worlds[world_name] = world
             
@@ -271,7 +295,7 @@ tick-rate=20
         """Обновление времени мира"""
         try:
             for world in self.worlds.values():
-                world['time'] = (world['time'] + 1) % 24000
+                world.time = (world.time + 1) % 24000
                 
         except Exception as e:
             logger.error(f"❌ Ошибка обновления времени мира: {e}")
@@ -340,9 +364,9 @@ tick-rate=20
                 join_time=datetime.now(),
                 last_seen=datetime.now(),
                 gamemode=self.config.get('gamemode', 'survival'),
-                spawn_x=world['spawn_x'],
-                spawn_y=world['spawn_y'],
-                spawn_z=world['spawn_z']
+                spawn_x=world.spawn_x,
+                spawn_y=world.spawn_y,
+                spawn_z=world.spawn_z
             )
             
             self.players[username] = player
