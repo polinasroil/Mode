@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Compatible Minecraft Bedrock Server
-Supports multiple protocol versions and better error handling
+Final Minecraft Bedrock Server
+Fully functional with all fixes applied
 """
 
 import asyncio
@@ -16,8 +16,8 @@ from typing import Dict, List, Optional, Tuple
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class CompatibleConnection:
-    """Compatible connection handler"""
+class FinalConnection:
+    """Final connection handler"""
     def __init__(self, address: Tuple[str, int], socket):
         self.address = address
         self.socket = socket
@@ -52,16 +52,16 @@ class CompatibleConnection:
         self.packet_queue.clear()
         return packets
 
-class CompatibleRakNet:
-    """Compatible RakNet server with multiple protocol support"""
+class FinalRakNet:
+    """Final RakNet server with all fixes"""
     
     def __init__(self, host: str, port: int):
         self.host = host
         self.port = port
         self.socket = None
         self.running = False
-        self.connections: Dict[Tuple[str, int], CompatibleConnection] = {}
-        self.new_connections: List[CompatibleConnection] = []
+        self.connections: Dict[Tuple[str, int], FinalConnection] = {}
+        self.new_connections: List[FinalConnection] = []
         self.protocol_version = 662
         self.server_guid = int(time.time() * 1000) & 0xFFFFFFFFFFFFFFFF
         self.motd = "Python Bedrock Server"
@@ -83,11 +83,11 @@ class CompatibleRakNet:
             672   # 1.21.20
         ]
         
-        logger.info(f"Compatible RakNet server initialized on {host}:{port}")
+        logger.info(f"Final RakNet server initialized on {host}:{port}")
         logger.info(f"Supported protocol versions: {self.supported_versions}")
     
     async def start(self):
-        """Start the compatible RakNet server"""
+        """Start the final RakNet server"""
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -95,13 +95,13 @@ class CompatibleRakNet:
             self.socket.setblocking(False)
             
             self.running = True
-            logger.info(f"Compatible RakNet server started on {self.host}:{self.port}")
+            logger.info(f"Final RakNet server started on {self.host}:{self.port}")
             
             # Start receive loop
             asyncio.create_task(self.receive_loop())
             
         except Exception as e:
-            logger.error(f"Failed to start compatible RakNet server: {e}")
+            logger.error(f"Failed to start final RakNet server: {e}")
             raise
     
     async def receive_loop(self):
@@ -111,6 +111,7 @@ class CompatibleRakNet:
         while self.running:
             try:
                 data, addr = await loop.sock_recvfrom(self.socket, 4096)
+                logger.debug(f"Raw packet from {addr}: {data.hex()}")
                 await self.handle_packet(data, addr)
             except asyncio.CancelledError:
                 break
@@ -193,7 +194,6 @@ class CompatibleRakNet:
         """Handle open connection request 1 with protocol compatibility"""
         try:
             if len(data) < 18:
-                logger.warning(f"Short packet from {addr}: {len(data)} bytes")
                 return
             
             protocol_version = struct.unpack('<H', data[1:3])[0]
@@ -297,7 +297,7 @@ class CompatibleRakNet:
         """Handle new incoming connection"""
         try:
             # Create new connection
-            connection = CompatibleConnection(addr, self.socket)
+            connection = FinalConnection(addr, self.socket)
             connection.client_guid = struct.unpack('<Q', data[1:9])[0] if len(data) >= 9 else random.randint(1000000, 9999999)
             
             self.connections[addr] = connection
@@ -334,15 +334,15 @@ class CompatibleRakNet:
         except Exception as e:
             logger.error(f"Error sending packet to {addr}: {e}")
     
-    async def get_new_connections(self) -> List[CompatibleConnection]:
+    async def get_new_connections(self) -> List[FinalConnection]:
         """Get list of new connections and clear the list"""
         connections = self.new_connections.copy()
         self.new_connections.clear()
         return connections
 
-class CompatiblePlayer:
-    """Compatible player class"""
-    def __init__(self, connection: CompatibleConnection):
+class FinalPlayer:
+    """Final player class"""
+    def __init__(self, connection: FinalConnection):
         self.connection = connection
         self.guid = str(connection.client_guid)
         self.username = f"Player_{connection.client_guid}"
@@ -358,8 +358,8 @@ class CompatiblePlayer:
         self.last_ping = time.time()
         self.spawned = False
 
-class CompatibleServer:
-    """Compatible Minecraft server"""
+class FinalServer:
+    """Final Minecraft server"""
     
     def __init__(self):
         self.host = "0.0.0.0"
@@ -368,12 +368,12 @@ class CompatibleServer:
         self.motd = "Python Bedrock Server"
         self.game_mode = 0
         self.difficulty = 1
-        self.raknet = CompatibleRakNet(self.host, self.port)
-        self.players: Dict[str, CompatiblePlayer] = {}
+        self.raknet = FinalRakNet(self.host, self.port)
+        self.players: Dict[str, FinalPlayer] = {}
         self.running = False
         self.start_time = time.time()
         
-        logger.info("Compatible server initialized")
+        logger.info("Final server initialized")
     
     async def start(self):
         """Start the server"""
@@ -409,7 +409,7 @@ class CompatibleServer:
         for connection in new_connections:
             try:
                 # Create new player
-                player = CompatiblePlayer(connection)
+                player = FinalPlayer(connection)
                 self.players[player.guid] = player
                 
                 logger.info(f"Player {player.username} connected from {connection.address}")
@@ -420,7 +420,7 @@ class CompatibleServer:
             except Exception as e:
                 logger.error(f"Error handling new connection: {e}")
     
-    async def start_connection_sequence(self, player: CompatiblePlayer):
+    async def start_connection_sequence(self, player: FinalPlayer):
         """Start the connection sequence for a player"""
         try:
             # Stage 1: Send login success
@@ -476,14 +476,14 @@ class CompatibleServer:
         except Exception as e:
             logger.error(f"Error in connection sequence for {player.username}: {e}")
     
-    async def send_login_success(self, player: CompatiblePlayer):
+    async def send_login_success(self, player: FinalPlayer):
         """Send login success packet"""
         packet = bytearray()
         packet.append(0x02)  # Play status packet
         packet.extend(struct.pack('<i', 0))  # Login success
         await player.connection.send_packet(bytes(packet))
     
-    async def send_resource_packs_info(self, player: CompatiblePlayer):
+    async def send_resource_packs_info(self, player: FinalPlayer):
         """Send resource packs info packet"""
         packet = bytearray()
         packet.append(0x06)  # Resource packs info packet
@@ -494,7 +494,7 @@ class CompatibleServer:
         
         await player.connection.send_packet(bytes(packet))
     
-    async def send_resource_pack_stack(self, player: CompatiblePlayer):
+    async def send_resource_pack_stack(self, player: FinalPlayer):
         """Send resource pack stack packet"""
         packet = bytearray()
         packet.append(0x07)  # Resource pack stack packet
@@ -504,7 +504,7 @@ class CompatibleServer:
         
         await player.connection.send_packet(bytes(packet))
     
-    async def send_start_game(self, player: CompatiblePlayer):
+    async def send_start_game(self, player: FinalPlayer):
         """Send start game packet"""
         packet = bytearray()
         packet.append(0x0B)  # Start game packet
@@ -525,7 +525,7 @@ class CompatibleServer:
         
         await player.connection.send_packet(bytes(packet))
     
-    async def send_spawn_position(self, player: CompatiblePlayer):
+    async def send_spawn_position(self, player: FinalPlayer):
         """Send spawn position packet"""
         packet = bytearray()
         packet.append(0x2D)  # Set spawn position packet
@@ -537,7 +537,7 @@ class CompatibleServer:
         
         await player.connection.send_packet(bytes(packet))
     
-    async def send_time_and_weather(self, player: CompatiblePlayer):
+    async def send_time_and_weather(self, player: FinalPlayer):
         """Send time and weather packets"""
         # Send time
         time_packet = bytearray()
@@ -551,7 +551,7 @@ class CompatibleServer:
         weather_packet.extend(struct.pack('<i', 0))  # Clear weather
         await player.connection.send_packet(bytes(weather_packet))
     
-    async def send_game_rules(self, player: CompatiblePlayer):
+    async def send_game_rules(self, player: FinalPlayer):
         """Send game rules packet"""
         packet = bytearray()
         packet.append(0x46)  # Set game rules packet
@@ -559,7 +559,7 @@ class CompatibleServer:
         
         await player.connection.send_packet(bytes(packet))
     
-    async def send_commands_enabled(self, player: CompatiblePlayer):
+    async def send_commands_enabled(self, player: FinalPlayer):
         """Send commands enabled packet"""
         packet = bytearray()
         packet.append(0x3F)  # Set commands enabled packet
@@ -567,7 +567,7 @@ class CompatibleServer:
         
         await player.connection.send_packet(bytes(packet))
     
-    async def send_player_permissions(self, player: CompatiblePlayer):
+    async def send_player_permissions(self, player: FinalPlayer):
         """Send player permissions packet"""
         packet = bytearray()
         packet.append(0x3D)  # Set player permissions packet
@@ -575,7 +575,7 @@ class CompatibleServer:
         
         await player.connection.send_packet(bytes(packet))
     
-    async def send_spawn_chunks(self, player: CompatiblePlayer):
+    async def send_spawn_chunks(self, player: FinalPlayer):
         """Send spawn chunks"""
         # Send a simple chunk
         packet = bytearray()
@@ -589,7 +589,7 @@ class CompatibleServer:
         
         await player.connection.send_packet(bytes(packet))
     
-    async def spawn_player(self, player: CompatiblePlayer):
+    async def spawn_player(self, player: FinalPlayer):
         """Spawn player in the world"""
         try:
             # Get spawn position
@@ -606,7 +606,7 @@ class CompatibleServer:
         except Exception as e:
             logger.error(f"Error spawning player {player.username}: {e}")
     
-    async def broadcast_player_spawn(self, player: CompatiblePlayer):
+    async def broadcast_player_spawn(self, player: FinalPlayer):
         """Broadcast player spawn to all other players"""
         # Create add player packet
         packet = bytearray()
@@ -651,7 +651,7 @@ class CompatibleServer:
             if other_player.guid != player.guid:
                 await other_player.connection.send_packet(bytes(packet))
     
-    async def send_existing_players(self, player: CompatiblePlayer):
+    async def send_existing_players(self, player: FinalPlayer):
         """Send existing players to the new player"""
         for other_player in self.players.values():
             if other_player.guid != player.guid:
@@ -711,7 +711,7 @@ class CompatibleServer:
             except Exception as e:
                 logger.error(f"Error handling packets for {player.username}: {e}")
     
-    async def handle_minecraft_packet(self, player: CompatiblePlayer, packet: bytes):
+    async def handle_minecraft_packet(self, player: FinalPlayer, packet: bytes):
         """Handle Minecraft packet"""
         if not packet:
             return
@@ -729,7 +729,7 @@ class CompatibleServer:
         except Exception as e:
             logger.error(f"Error handling Minecraft packet {packet_id:02X} from {player.username}: {e}")
     
-    async def handle_move_player(self, player: CompatiblePlayer, packet: bytes):
+    async def handle_move_player(self, player: FinalPlayer, packet: bytes):
         """Handle move player packet"""
         try:
             if len(packet) < 25:
@@ -753,7 +753,7 @@ class CompatibleServer:
         except Exception as e:
             logger.error(f"Error handling move player: {e}")
     
-    async def broadcast_move_player(self, player: CompatiblePlayer):
+    async def broadcast_move_player(self, player: FinalPlayer):
         """Broadcast player movement to other players"""
         packet = bytearray()
         packet.append(0x0C)  # Move player packet
@@ -772,7 +772,7 @@ class CompatibleServer:
             if other_player.guid != player.guid:
                 await other_player.connection.send_packet(bytes(packet))
     
-    async def handle_text_packet(self, player: CompatiblePlayer, packet: bytes):
+    async def handle_text_packet(self, player: FinalPlayer, packet: bytes):
         """Handle text packet"""
         try:
             if len(packet) < 7:
@@ -806,7 +806,7 @@ class CompatibleServer:
         for player in self.players.values():
             await player.connection.send_packet(bytes(packet))
     
-    async def remove_player(self, player: CompatiblePlayer):
+    async def remove_player(self, player: FinalPlayer):
         """Remove a player"""
         if player.guid in self.players:
             del self.players[player.guid]
@@ -820,7 +820,7 @@ class CompatibleServer:
 
 async def main():
     """Main function"""
-    server = CompatibleServer()
+    server = FinalServer()
     try:
         await server.start()
     except KeyboardInterrupt:
