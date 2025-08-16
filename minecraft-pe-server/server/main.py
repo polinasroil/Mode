@@ -286,12 +286,8 @@ log-file=server.log
         
         # Запуск RakNet протокола
         try:
-            # Запуск сетевого протокола в отдельной задаче
-            network_task = asyncio.create_task(self.network.start(port=self.server_port))
-            
-            # Небольшая задержка для запуска протокола
-            await asyncio.sleep(1)
-            
+            # Запуск сетевого протокола
+            await self.network.start(port=self.server_port)
             logger.info(f"RakNet протокол запущен на порту {self.server_port}")
             
         except Exception as e:

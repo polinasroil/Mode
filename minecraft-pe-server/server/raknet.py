@@ -119,8 +119,8 @@ class RakNetProtocol:
             
             logger.info(f"RakNet сокет создан и привязан к {host}:{port}")
             
-            # Запуск основного цикла
-            await self.main_loop()
+            # Запуск обработчика пакетов в фоне
+            asyncio.create_task(self.packet_handler_loop())
             
         except Exception as e:
             logger.error(f"Ошибка запуска RakNet протокола: {e}")
@@ -139,9 +139,9 @@ class RakNetProtocol:
         
         logger.info("RakNet протокол остановлен")
     
-    async def main_loop(self):
-        """Основной цикл обработки пакетов"""
-        logger.info("Запуск основного цикла RakNet")
+    async def packet_handler_loop(self):
+        """Цикл обработки пакетов (неблокирующий)"""
+        logger.info("Запуск цикла обработки пакетов RakNet")
         
         while self.running:
             try:
@@ -155,7 +155,7 @@ class RakNetProtocol:
                 await asyncio.sleep(0.001)  # 1ms
                 
             except Exception as e:
-                logger.error(f"Ошибка в основном цикле RakNet: {e}")
+                logger.error(f"Ошибка в цикле обработки пакетов RakNet: {e}")
                 await asyncio.sleep(0.1)
     
     async def handle_incoming_packets(self):
