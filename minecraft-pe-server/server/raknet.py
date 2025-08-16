@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Minecraft PE Server - RakNet протокол
+Minecraft PE Server - RakNet протокол (исправленная версия)
 Автор: Minecraft PE Server Team
 Версия: 1.0.0
 """
@@ -12,17 +12,18 @@ import struct
 import logging
 import time
 import random
+import hashlib
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-# RakNet константы
+# RakNet константы (согласно документации)
 RAKNET_PROTOCOL_VERSION = 11
 MINECRAFT_PROTOCOL_VERSION = 662
 
-# RakNet пакеты
+# RakNet пакеты (правильные ID)
 ID_UNCONNECTED_PING = 0x01
 ID_UNCONNECTED_PONG = 0x1C
 ID_OPEN_CONNECTION_REQUEST_1 = 0x05
@@ -53,7 +54,7 @@ ID_DATA_PACKET_D = 0x8D
 ID_DATA_PACKET_E = 0x8E
 ID_DATA_PACKET_F = 0x8F
 
-# Minecraft PE пакеты
+# Minecraft PE пакеты (правильные ID)
 MC_LOGIN = 0x01
 MC_PLAY_STATUS = 0x02
 MC_DISCONNECT = 0x05
@@ -77,14 +78,16 @@ class RakNetSession:
     sequence_number: int = 0
     split_packet_id: int = 0
     split_packets: Dict[int, List[bytes]] = None
+    username: str = ""
     
     def __post_init__(self):
         if self.split_packets is None:
             self.split_packets = {}
-        self.guid = random.randint(0, 0xFFFFFFFFFFFFFFFF)
+        if not self.guid:
+            self.guid = random.randint(0, 0xFFFFFFFFFFFFFFFF)
 
 class RakNetProtocol:
-    """Реализация RakNet протокола для Minecraft PE"""
+    """Реализация RakNet протокола для Minecraft PE (исправленная)"""
     
     def __init__(self, server):
         self.server = server
@@ -221,8 +224,8 @@ class RakNetProtocol:
             pong_data += struct.pack('>Q', ping_time)
             pong_data += struct.pack('>Q', self.server_guid)
             
-            # Добавление информации о сервере
-            server_info = f"MCPE;{self.server.server_name};{MINECRAFT_PROTOCOL_VERSION};1.20.50;0;{len(self.sessions)};{self.server.max_players};{self.server_guid};{self.server.config.get('level-name', 'world')};{self.server.config.get('gamemode', 'survival')};{self.server.config.get('difficulty', 'normal')}"
+            # Добавление информации о сервере (правильный формат MCPE)
+            server_info = f"MCPE;{self.server.server_name};{MINECRAFT_PROTOCOL_VERSION};1.20.50;0;{len([s for s in self.sessions.values() if s.state == 'connected'])};{self.server.max_players};{self.server_guid};{self.server.config.get('level-name', 'world')};{self.server.config.get('gamemode', 'survival')};{self.server.config.get('difficulty', 'normal')}"
             pong_data += server_info.encode('utf-8')
             
             # Отправка pong
@@ -447,6 +450,7 @@ class RakNetProtocol:
             # Парсинг данных входа (упрощенно)
             if len(data) > 1:
                 username = data[1:].decode('utf-8', errors='ignore').split('\x00')[0]
+                session.username = username
                 
                 logger.info(f"Попытка входа игрока {username} с {session.address}")
                 
@@ -474,14 +478,14 @@ class RakNetProtocol:
         try:
             if len(data) > 1:
                 message = data[1:].decode('utf-8', errors='ignore')
-                logger.info(f"Сообщение от {session.address}: {message}")
+                logger.info(f"Сообщение от {session.username or session.address}: {message}")
                 
                 # Обработка команд
                 if message.startswith('/'):
                     await self.handle_command(message, session)
                 else:
                     # Отправка сообщения всем игрокам
-                    await self.broadcast_message(f"<Player> {message}")
+                    await self.broadcast_message(f"<{session.username or 'Player'}> {message}")
                     
         except Exception as e:
             logger.error(f"Ошибка обработки текста: {e}")

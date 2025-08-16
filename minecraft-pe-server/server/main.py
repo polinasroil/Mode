@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Minecraft PE Server - Основной сервер
+Minecraft PE Server - Основной сервер (исправленная версия)
 Автор: Minecraft PE Server Team
 Версия: 1.0.0
 """
@@ -103,6 +103,25 @@ class MinecraftPEServer:
         """Загрузка конфигурации сервера"""
         try:
             config = {}
+            
+            # Проверяем существование файла конфигурации
+            if not os.path.exists(self.config_path):
+                logger.warning(f"Файл конфигурации не найден: {self.config_path}")
+                logger.info("Создаю конфигурацию по умолчанию...")
+                
+                # Создаем директорию если не существует
+                config_dir = os.path.dirname(self.config_path)
+                if config_dir and not os.path.exists(config_dir):
+                    os.makedirs(config_dir, exist_ok=True)
+                
+                # Создаем файл конфигурации по умолчанию
+                default_config = self.create_default_config()
+                with open(self.config_path, 'w', encoding='utf-8') as f:
+                    f.write(default_config)
+                
+                logger.info("Файл конфигурации создан по умолчанию")
+            
+            # Загружаем конфигурацию
             if os.path.exists(self.config_path):
                 with open(self.config_path, 'r', encoding='utf-8') as f:
                     for line in f:
@@ -123,7 +142,10 @@ class MinecraftPEServer:
                 'level-seed': '0',
                 'spawn-protection': '16',
                 'hardcore': 'false',
-                'pvp': 'true'
+                'pvp': 'true',
+                'backup-interval': '3600',
+                'auto-save': 'true',
+                'auto-save-interval': '300'
             }
             
             # Применение значений по умолчанию для отсутствующих ключей
@@ -133,6 +155,7 @@ class MinecraftPEServer:
             
             logger.info("Конфигурация загружена успешно")
             return config
+            
         except Exception as e:
             logger.error(f"Ошибка загрузки конфигурации: {e}")
             # Возвращаем значения по умолчанию при ошибке
@@ -147,8 +170,54 @@ class MinecraftPEServer:
                 'level-seed': '0',
                 'spawn-protection': '16',
                 'hardcore': 'false',
-                'pvp': 'true'
+                'pvp': 'true',
+                'backup-interval': '3600',
+                'auto-save': 'true',
+                'auto-save-interval': '300'
             }
+    
+    def create_default_config(self) -> str:
+        """Создание конфигурации по умолчанию"""
+        return """# Minecraft PE Server Configuration
+# Автор: Minecraft PE Server Team
+# Версия: 1.0.0
+
+# Основные настройки сервера
+server-name=Minecraft PE Server
+server-port=19132
+max-players=20
+
+# Настройки мира
+level-name=world
+level-type=default
+level-seed=0
+gamemode=survival
+difficulty=normal
+spawn-protection=16
+
+# Игровые настройки
+hardcore=false
+pvp=true
+
+# Системные настройки
+backup-interval=3600
+auto-save=true
+auto-save-interval=300
+
+# Сетевые настройки
+raknet-protocol-version=11
+minecraft-protocol-version=662
+mtu-size=1492
+
+# Настройки производительности
+tps=20
+chunk-load-distance=8
+max-chunk-loads-per-tick=4
+
+# Настройки логирования
+log-level=INFO
+log-file=server.log
+"""
     
     def init_default_world(self):
         """Инициализация мира по умолчанию"""
@@ -217,8 +286,14 @@ class MinecraftPEServer:
         
         # Запуск RakNet протокола
         try:
-            await self.network.start(port=self.server_port)
+            # Запуск сетевого протокола в отдельной задаче
+            network_task = asyncio.create_task(self.network.start(port=self.server_port))
+            
+            # Небольшая задержка для запуска протокола
+            await asyncio.sleep(1)
+            
             logger.info(f"RakNet протокол запущен на порту {self.server_port}")
+            
         except Exception as e:
             logger.error(f"Ошибка запуска RakNet протокола: {e}")
             raise
@@ -233,6 +308,7 @@ class MinecraftPEServer:
         ]
         
         try:
+            # Запуск всех задач
             await asyncio.gather(*tasks)
         except KeyboardInterrupt:
             logger.info("Получен сигнал остановки")
